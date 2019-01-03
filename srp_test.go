@@ -1,4 +1,4 @@
-package pmapi
+package srp
 
 import (
 	"math/rand"

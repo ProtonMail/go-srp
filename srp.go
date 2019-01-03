@@ -36,13 +36,12 @@ func ReadClearSignedMessage(signedMessage string) (string, error) {
 		return "", errors.New("pm-srp: extra data after modulus")
 	}
 
-	var modulusKeyring *openpgp.EntityList
-	modulusKeyring, err = openpgp.ReadArmoredKeyRing(bytes.NewReader([]byte(modulusPubkey)))
+	modulusKeyring, err := openpgp.ReadArmoredKeyRing(bytes.NewReader([]byte(modulusPubkey)))
 	if err != nil {
 		return "", errors.New("pm-srp: can not read modulus pubkey")
 	}
 
-	entity, err := openpgp.CheckArmoredDetachedSignature(modulusKeyring, bytes.NewReader(modulusBlock.Plaintext), bytes.NewReader(modulusBlock.ArmoredSignature), nil)
+	_, err = openpgp.CheckArmoredDetachedSignature(modulusKeyring, bytes.NewReader(modulusBlock.Plaintext), modulusBlock.ArmoredSignature.Body, nil)
 	if err != nil {
 		return "", errors.New("pm-srp: invalid modulus signature")
 	}
@@ -61,7 +60,7 @@ type SrpAuth struct {
 }
 
 func NewSrpAuth(version int, username, password, salt, modulus, serverEphemeral string) (auth *SrpAuth, err error) {
-	data = &SrpAuth{}
+	data := &SrpAuth{}
 
 	// Modulus
 	var modulusB64 string
