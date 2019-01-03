@@ -3,52 +3,102 @@ package srp
 import (
 	"bytes"
 	"crypto/rand"
-	"crypto/sha512"
+	"encoding/base64"
 	"errors"
 	"math/big"
 
-	"github.com/jameskeane/bcrypt"
+	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/clearsign"
 )
 
-// ReadClearSignedMessage read clear text from signed message which called Modulus from api response
+// Store random reader in a variable to be able to overwrite it in tests
+var randReader = rand.Reader
+
+// Amored pubkey for modulus verification
+const modulusPubkey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+xjMEXAHLgxYJKwYBBAHaRw8BAQdAFurWXXwjTemqjD7CXjXVyKf0of7n9Ctm
+L8v9enkzggHNEnByb3RvbkBzcnAubW9kdWx1c8J3BBAWCgApBQJcAcuDBgsJ
+BwgDAgkQNQWFxOlRjyYEFQgKAgMWAgECGQECGwMCHgEAAPGRAP9sauJsW12U
+MnTQUZpsbJb53d0Wv55mZIIiJL2XulpWPQD/V6NglBd96lZKBmInSXX/kXat
+Sv+y0io+LR8i2+jV+AbOOARcAcuDEgorBgEEAZdVAQUBAQdAeJHUz1c9+KfE
+kSIgcBRE3WuXC4oj5a2/U3oASExGDW4DAQgHwmEEGBYIABMFAlwBy4MJEDUF
+hcTpUY8mAhsMAAD/XQD8DxNI6E78meodQI+wLsrKLeHn32iLvUqJbVDhfWSU
+WO4BAMcm1u02t4VKw++ttECPt+HUgPUq5pqQWe5Q2cW4TMsE
+=Y4Mw
+-----END PGP PUBLIC KEY BLOCK-----`
+
+// ReadClearSignedMessage reads clear text from signed message which called
+// Modulus from API response and verify the signature
 func ReadClearSignedMessage(signedMessage string) (string, error) {
 	modulusBlock, rest := clearsign.Decode([]byte(signedMessage))
 	if len(rest) != 0 {
-		return "", errors.New("mobile: extra data after modulus")
+		return "", errors.New("pm-srp: extra data after modulus")
 	}
+
+	var modulusKeyring *openpgp.EntityList
+	modulusKeyring, err = openpgp.ReadArmoredKeyRing(bytes.NewReader([]byte(modulusPubkey)))
+	if err != nil {
+		return "", errors.New("pm-srp: can not read modulus pubkey")
+	}
+
+	entity, err := openpgp.CheckArmoredDetachedSignature(modulusKeyring, bytes.NewReader(modulusBlock.Plaintext), bytes.NewReader(modulusBlock.ArmoredSignature), nil)
+	if err != nil {
+		return "", errors.New("pm-srp: invalid modulus signature")
+	}
+
 	return string(modulusBlock.Bytes), nil
 }
-
-// BCrypt hash function pass the password and salt in
-func BCrypt(password string, salt string) (string, error) {
-	return bcrypt.Hash(password, salt)
-}
-
-// ExpandHash expand hash for srp flow
-func ExpandHash(data []byte) []byte {
-	part0 := sha512.Sum512(append(data, 0))
-	part1 := sha512.Sum512(append(data, 1))
-	part2 := sha512.Sum512(append(data, 2))
-	part3 := sha512.Sum512(append(data, 3))
-	return bytes.Join([][]byte{
-		part0[:],
-		part1[:],
-		part2[:],
-		part3[:],
-	}, []byte{})
-}
-
-// Store random reader in a variable to be able to overwrite it in tests
-var randReader = rand.Reader
 
 // SrpProofs object
 type SrpProofs struct {
 	ClientProof, ClientEphemeral, ExpectedServerProof []byte
 }
 
+// Srp authentication data
+type SrpAuth struct {
+	Modulus, ServerEphemeral, HashedPassword []byte
+}
+
+func NewSrpAuth(version int, username, password, salt, modulus, serverEphemeral string) (auth *SrpAuth, err error) {
+	data = &SrpAuth{}
+
+	// Modulus
+	var modulusB64 string
+	modulusB64, err = ReadClearSignedMessage(modulus)
+	if err != nil {
+		return
+	}
+	data.Modulus, err = base64.StdEncoding.DecodeString(modulusB64)
+	if err != nil {
+		return
+	}
+
+	// Password
+	var decodedSalt []byte
+	if version >= 3 {
+		decodedSalt, err = base64.StdEncoding.DecodeString(salt)
+		if err != nil {
+			return
+		}
+	}
+	data.HashedPassword, err = HashPassword(version, password, username, decodedSalt, data.Modulus)
+	if err != nil {
+		return
+	}
+
+	// Server ephermeral
+	data.ServerEphemeral, err = base64.StdEncoding.DecodeString(serverEphemeral)
+	if err != nil {
+		return
+	}
+
+	auth = data
+	return
+}
+
 // GenerateSrpProofs generate auth proofs
-func GenerateSrpProofs(length int, modulusArr []byte, serverEphemeralArr []byte, hashedPasswordArr []byte) (res *SrpProofs, err error) {
+func (s *SrpAuth) GenerateSrpProofs(length int) (res *SrpProofs, err error) {
 	toInt := func(arr []byte) *big.Int {
 		var reversed = make([]byte, len(arr))
 		for i := 0; i < len(arr); i++ {
@@ -67,42 +117,42 @@ func GenerateSrpProofs(length int, modulusArr []byte, serverEphemeralArr []byte,
 	}
 
 	generator := big.NewInt(2)
-	multiplier := toInt(ExpandHash(append(fromInt(generator), modulusArr...)))
+	multiplier := toInt(ExpandHash(append(fromInt(generator), s.Modulus...)))
 
-	modulus := toInt(modulusArr)
-	serverEphemeral := toInt(serverEphemeralArr)
-	hashedPassword := toInt(hashedPasswordArr)
+	modulus := toInt(s.Modulus)
+	serverEphemeral := toInt(s.ServerEphemeral)
+	hashedPassword := toInt(s.HashedPassword)
 
 	modulusMinusOne := big.NewInt(0).Sub(modulus, big.NewInt(1))
 
 	if modulus.BitLen() != length {
-		return nil, errors.New("mobile: SRP modulus has incorrect size")
+		return nil, errors.New("pm-srp: SRP modulus has incorrect size")
 	}
 
 	multiplier = multiplier.Mod(multiplier, modulus)
 
 	if multiplier.Cmp(big.NewInt(1)) <= 0 || multiplier.Cmp(modulusMinusOne) >= 0 {
-		return nil, errors.New("mobile: SRP multiplier is out of bounds")
+		return nil, errors.New("pm-srp: SRP multiplier is out of bounds")
 	}
 
 	if generator.Cmp(big.NewInt(1)) <= 0 || generator.Cmp(modulusMinusOne) >= 0 {
-		return nil, errors.New("mobile: SRP generator is out of bounds")
+		return nil, errors.New("pm-srp: SRP generator is out of bounds")
 	}
 
 	if serverEphemeral.Cmp(big.NewInt(1)) <= 0 || serverEphemeral.Cmp(modulusMinusOne) >= 0 {
-		return nil, errors.New("mobile: SRP server ephemeral is out of bounds")
+		return nil, errors.New("pm-srp: SRP server ephemeral is out of bounds")
 	}
 
 	// Check primality
 	// Doing exponentiation here is faster than a full call to ProbablyPrime while
 	// still perfectly accurate by Pocklington's theorem
 	if big.NewInt(0).Exp(big.NewInt(2), modulusMinusOne, modulus).Cmp(big.NewInt(1)) != 0 {
-		return nil, errors.New("mobile: SRP modulus is not prime")
+		return nil, errors.New("pm-srp: SRP modulus is not prime")
 	}
 
 	// Check safe primality
 	if !big.NewInt(0).Rsh(modulus, 1).ProbablyPrime(10) {
-		return nil, errors.New("mobile: SRP modulus is not a safe prime")
+		return nil, errors.New("pm-srp: SRP modulus is not a safe prime")
 	}
 
 	var clientSecret, clientEphemeral, scramblingParam *big.Int
@@ -139,6 +189,6 @@ func GenerateSrpProofs(length int, modulusArr []byte, serverEphemeralArr []byte,
 }
 
 // GenerateVerifier verifier for update pwds and create accounts
-func GenerateVerifier(length int, modulus []byte, hashedPassword []byte) ([]byte, error) {
-	return nil, errors.New("mobile: the client doesn't need SRP GenerateVerifier")
+func (s *SrpAuth) GenerateVerifier(length int) ([]byte, error) {
+	return nil, errors.New("pm-srp: the client doesn't need SRP GenerateVerifier")
 }
