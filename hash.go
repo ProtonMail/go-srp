@@ -48,7 +48,7 @@ func HashPassword(authVersion int, password, userName string, salt, modulus []by
 	}
 }
 
-func cleanUserName(userName string) string {
+func CleanUserName(userName string) string {
 	userName = strings.Replace(userName, "-", "", -1)
 	userName = strings.Replace(userName, ".", "", -1)
 	userName = strings.Replace(userName, "_", "", -1)
@@ -66,7 +66,7 @@ func hashPasswordVersion3(password string, salt, modulus []byte) (res []byte, er
 }
 
 func hashPasswordVersion2(password, userName string, modulus []byte) (res []byte, err error) {
-	return hashPasswordVersion1(password, cleanUserName(userName), modulus)
+	return hashPasswordVersion1(password, CleanUserName(userName), modulus)
 }
 
 func hashPasswordVersion1(password, userName string, modulus []byte) (res []byte, err error) {
