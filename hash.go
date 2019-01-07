@@ -14,12 +14,12 @@ import (
 
 // FIXME: These leak information by using non constant-time encoding
 
-// BCryptHash function pass the password and salt in
+// BCryptHash function bcrypt algorithm to hash password with salt
 func BCryptHash(password string, salt string) (string, error) {
 	return bcrypt.Hash(password, salt)
 }
 
-// ExpandHash expand hash for srp flow
+// ExpandHash extends the byte data for SRP flow
 func ExpandHash(data []byte) []byte {
 	part0 := sha512.Sum512(append(data, 0))
 	part1 := sha512.Sum512(append(data, 1))
@@ -33,6 +33,10 @@ func ExpandHash(data []byte) []byte {
 	}, []byte{})
 }
 
+// HashPassword returns the hash of password argument. Based on version number
+// following arguments are used in addition to password:
+// * 0, 1, 2: userName and modulus
+// * 3, 4: salt and modulus
 func HashPassword(authVersion int, password, userName string, salt, modulus []byte) ([]byte, error) {
 	switch authVersion {
 	case 4, 3:
@@ -48,6 +52,8 @@ func HashPassword(authVersion int, password, userName string, salt, modulus []by
 	}
 }
 
+// CleanUserName returns the input string in lower-case without characters `_`,
+// `.` and `-`.
 func CleanUserName(userName string) string {
 	userName = strings.Replace(userName, "-", "", -1)
 	userName = strings.Replace(userName, ".", "", -1)
@@ -57,7 +63,7 @@ func CleanUserName(userName string) string {
 
 func hashPasswordVersion3(password string, salt, modulus []byte) (res []byte, err error) {
 	encodedSalt := base64.NewEncoding("./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789").WithPadding(base64.NoPadding).EncodeToString(append(salt, []byte("proton")...))
-	crypted, err := bcrypt.Hash(password, "$2y$10$"+encodedSalt)
+	crypted, err := BCryptHash(password, "$2y$10$"+encodedSalt)
 	if err != nil {
 		return
 	}
@@ -72,7 +78,7 @@ func hashPasswordVersion2(password, userName string, modulus []byte) (res []byte
 func hashPasswordVersion1(password, userName string, modulus []byte) (res []byte, err error) {
 	prehashed := md5.Sum([]byte(strings.ToLower(userName)))
 	encodedSalt := hex.EncodeToString(prehashed[:])
-	crypted, err := bcrypt.Hash(password, "$2y$10$"+encodedSalt)
+	crypted, err := BCryptHash(password, "$2y$10$"+encodedSalt)
 	if err != nil {
 		return
 	}
