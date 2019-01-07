@@ -28,8 +28,9 @@ WO4BAMcm1u02t4VKw++ttECPt+HUgPUq5pqQWe5Q2cW4TMsE
 =Y4Mw
 -----END PGP PUBLIC KEY BLOCK-----`
 
-// ReadClearSignedMessage reads clear text from signed message which called
-// Modulus from API response and verify the signature
+// ReadClearSignedMessage reads the clear text from signed message and verifies
+// signature. There must be no data appended after signed message in input string.
+// The message must be sign by key corresponding to `modulusPubkey`.
 func ReadClearSignedMessage(signedMessage string) (string, error) {
 	modulusBlock, rest := clearsign.Decode([]byte(signedMessage))
 	if len(rest) != 0 {
@@ -54,11 +55,14 @@ type SrpProofs struct {
 	ClientProof, ClientEphemeral, ExpectedServerProof []byte
 }
 
-// Srp authentication data
+// SrpAuth stores byte data for the calculation of SRP proofs
 type SrpAuth struct {
 	Modulus, ServerEphemeral, HashedPassword []byte
 }
 
+// Creates new SrpAuth from strings input. Salt and server ephemeral are in
+// base64 format. Modulus is base64 with signature attached. The signature is
+// verified against server key. The version controls password hash algorithm.
 func NewSrpAuth(version int, username, password, salt, modulus, serverEphemeral string) (auth *SrpAuth, err error) {
 	data := &SrpAuth{}
 
@@ -96,7 +100,7 @@ func NewSrpAuth(version int, username, password, salt, modulus, serverEphemeral 
 	return
 }
 
-// GenerateSrpProofs generate auth proofs
+// GenerateSrpProofs calculates SPR proofs.
 func (s *SrpAuth) GenerateSrpProofs(length int) (res *SrpProofs, err error) {
 	toInt := func(arr []byte) *big.Int {
 		var reversed = make([]byte, len(arr))
