@@ -42,7 +42,7 @@ func ReadClearSignedMessage(signedMessage string) (string, error) {
 		return "", errors.New("pm-srp: can not read modulus pubkey")
 	}
 
-	_, err = openpgp.CheckArmoredDetachedSignature(modulusKeyring, bytes.NewReader(modulusBlock.Plaintext), modulusBlock.ArmoredSignature.Body, nil)
+	_, err = openpgp.CheckDetachedSignature(modulusKeyring, bytes.NewReader(modulusBlock.Bytes), modulusBlock.ArmoredSignature.Body, nil)
 	if err != nil {
 		return "", errors.New("pm-srp: invalid modulus signature")
 	}
