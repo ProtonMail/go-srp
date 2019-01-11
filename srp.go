@@ -11,6 +11,11 @@ import (
 	"golang.org/x/crypto/openpgp/clearsign"
 )
 
+var (
+	ErrDataAfterModulus = errors.New("pm-srp: extra data after modulus")
+	ErrInvalidSignature = errors.New("pm-srp: invalid modulus signature")
+)
+
 // Store random reader in a variable to be able to overwrite it in tests
 var randReader = rand.Reader
 
@@ -34,7 +39,7 @@ WO4BAMcm1u02t4VKw++ttECPt+HUgPUq5pqQWe5Q2cW4TMsE
 func ReadClearSignedMessage(signedMessage string) (string, error) {
 	modulusBlock, rest := clearsign.Decode([]byte(signedMessage))
 	if len(rest) != 0 {
-		return "", errors.New("pm-srp: extra data after modulus")
+		return "", ErrDataAfterModulus
 	}
 
 	modulusKeyring, err := openpgp.ReadArmoredKeyRing(bytes.NewReader([]byte(modulusPubkey)))
@@ -44,7 +49,7 @@ func ReadClearSignedMessage(signedMessage string) (string, error) {
 
 	_, err = openpgp.CheckDetachedSignature(modulusKeyring, bytes.NewReader(modulusBlock.Bytes), modulusBlock.ArmoredSignature.Body, nil)
 	if err != nil {
-		return "", errors.New("pm-srp: invalid modulus signature")
+		return "", ErrInvalidSignature
 	}
 
 	return string(modulusBlock.Bytes), nil
