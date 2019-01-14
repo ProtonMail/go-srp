@@ -68,16 +68,16 @@ type SrpAuth struct {
 // Creates new SrpAuth from strings input. Salt and server ephemeral are in
 // base64 format. Modulus is base64 with signature attached. The signature is
 // verified against server key. The version controls password hash algorithm.
-func NewSrpAuth(version int, username, password, salt, modulus, serverEphemeral string) (auth *SrpAuth, err error) {
+func NewSrpAuth(version int, username, password, salt, signedModulus, serverEphemeral string) (auth *SrpAuth, err error) {
 	data := &SrpAuth{}
 
 	// Modulus
-	var modulusB64 string
-	modulusB64, err = ReadClearSignedMessage(modulus)
+	var modulus string
+	modulus, err = ReadClearSignedMessage(signedModulus)
 	if err != nil {
 		return
 	}
-	data.Modulus, err = base64.StdEncoding.DecodeString(modulusB64)
+	data.Modulus, err = base64.StdEncoding.DecodeString(modulus)
 	if err != nil {
 		return
 	}
