@@ -14,10 +14,10 @@ import (
 var (
 	ErrDataAfterModulus = errors.New("pm-srp: extra data after modulus")
 	ErrInvalidSignature = errors.New("pm-srp: invalid modulus signature")
+	RandReader          = rand.Reader
 )
 
 // Store random reader in a variable to be able to overwrite it in tests
-var randReader = rand.Reader
 
 // Amored pubkey for modulus verification
 const modulusPubkey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -166,7 +166,7 @@ func (s *SrpAuth) GenerateSrpProofs(length int) (res *SrpProofs, err error) {
 	var clientSecret, clientEphemeral, scramblingParam *big.Int
 	for {
 		for {
-			clientSecret, err = rand.Int(randReader, modulusMinusOne)
+			clientSecret, err = rand.Int(RandReader, modulusMinusOne)
 			if err != nil {
 				return
 			}
