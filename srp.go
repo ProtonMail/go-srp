@@ -2,22 +2,40 @@ package srp
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"math/big"
 
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/clearsign"
+	"golang.org/x/crypto/rand"
 )
 
 var (
+	// ErrDataAfterModulus found extra data after decode the modulus
 	ErrDataAfterModulus = errors.New("pm-srp: extra data after modulus")
+
+	// ErrInvalidSignature invalid modulus signature
 	ErrInvalidSignature = errors.New("pm-srp: invalid modulus signature")
 )
 
 // Store random reader in a variable to be able to overwrite it in tests
 var randReader = rand.Reader
+
+// Proofs Srp Proofs object. Changed SrpProofs to Proofs because the name will be used as srp.SrpProofs by other packages and as SrpSrpProofs on mobile
+// ClientProof []byte  client proof
+// ClientEphemeral []byte  calculated from
+// ExpectedServerProof []byte
+type Proofs struct {
+	ClientProof, ClientEphemeral, ExpectedServerProof []byte
+}
+
+// AuthInfo stores byte data for the calculation of SRP proofs.
+//  * Changed SrpAuto to AuthInfo because the name will be used as srp.SrpAuto by other packages and as SrpSrpAuth on mobile
+//  * Also the data from the API called AuthInfo. it could be match the meaning and reduce the confusion
+type AuthInfo struct {
+	Modulus, ServerEphemeral, HashedPassword []byte
+}
 
 // Amored pubkey for modulus verification
 const modulusPubkey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -33,10 +51,10 @@ WO4BAMcm1u02t4VKw++ttECPt+HUgPUq5pqQWe5Q2cW4TMsE
 =Y4Mw
 -----END PGP PUBLIC KEY BLOCK-----`
 
-// ReadClearSignedMessage reads the clear text from signed message and verifies
+// readClearSignedMessage reads the clear text from signed message and verifies
 // signature. There must be no data appended after signed message in input string.
 // The message must be sign by key corresponding to `modulusPubkey`.
-func ReadClearSignedMessage(signedMessage string) (string, error) {
+func readClearSignedMessage(signedMessage string) (string, error) {
 	modulusBlock, rest := clearsign.Decode([]byte(signedMessage))
 	if len(rest) != 0 {
 		return "", ErrDataAfterModulus
@@ -55,25 +73,19 @@ func ReadClearSignedMessage(signedMessage string) (string, error) {
 	return string(modulusBlock.Bytes), nil
 }
 
-// SrpProofs object
-type SrpProofs struct {
-	ClientProof, ClientEphemeral, ExpectedServerProof []byte
+func GetModulusKey() string {
+	return modulusPubkey
 }
 
-// SrpAuth stores byte data for the calculation of SRP proofs
-type SrpAuth struct {
-	Modulus, ServerEphemeral, HashedPassword []byte
-}
-
-// Creates new SrpAuth from strings input. Salt and server ephemeral are in
+// NewAuthInfo Creates new SrpAuth from strings input. Salt and server ephemeral are in
 // base64 format. Modulus is base64 with signature attached. The signature is
 // verified against server key. The version controls password hash algorithm.
-func NewSrpAuth(version int, username, password, salt, signedModulus, serverEphemeral string) (auth *SrpAuth, err error) {
-	data := &SrpAuth{}
+func NewAuthInfo(version int, username, password, salt, signedModulus, serverEphemeral string) (auth *AuthInfo, err error) {
+	data := &AuthInfo{}
 
 	// Modulus
 	var modulus string
-	modulus, err = ReadClearSignedMessage(signedModulus)
+	modulus, err = readClearSignedMessage(signedModulus)
 	if err != nil {
 		return
 	}
@@ -105,8 +117,8 @@ func NewSrpAuth(version int, username, password, salt, signedModulus, serverEphe
 	return
 }
 
-// GenerateSrpProofs calculates SPR proofs.
-func (s *SrpAuth) GenerateSrpProofs(length int) (res *SrpProofs, err error) {
+// GenerateProofs calculates SPR proofs.
+func (s *AuthInfo) GenerateProofs(length int) (res *Proofs, err error) {
 	toInt := func(arr []byte) *big.Int {
 		var reversed = make([]byte, len(arr))
 		for i := 0; i < len(arr); i++ {
@@ -193,10 +205,10 @@ func (s *SrpAuth) GenerateSrpProofs(length int) (res *SrpProofs, err error) {
 	clientProof := ExpandHash(bytes.Join([][]byte{fromInt(clientEphemeral), fromInt(serverEphemeral), fromInt(sharedSession)}, []byte{}))
 	serverProof := ExpandHash(bytes.Join([][]byte{fromInt(clientEphemeral), clientProof, fromInt(sharedSession)}, []byte{}))
 
-	return &SrpProofs{ClientEphemeral: fromInt(clientEphemeral), ClientProof: clientProof, ExpectedServerProof: serverProof}, nil
+	return &Proofs{ClientEphemeral: fromInt(clientEphemeral), ClientProof: clientProof, ExpectedServerProof: serverProof}, nil
 }
 
 // GenerateVerifier verifier for update pwds and create accounts
-func (s *SrpAuth) GenerateVerifier(length int) ([]byte, error) {
+func (s *AuthInfo) GenerateVerifier(length int) ([]byte, error) {
 	return nil, errors.New("pm-srp: the client doesn't need SRP GenerateVerifier")
 }

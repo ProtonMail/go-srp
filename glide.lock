@@ -1,9 +1,8 @@
 hash: 5c2c259943e4ab35ec66b3bea8a0d2fc2de75b1e431c66ec11e8493aa90e7ff1
-updated: 2018-05-10T21:06:58.396231-07:00
+updated: 2019-01-14T22:04:20.18859-08:00
 imports:
 - name: github.com/jameskeane/bcrypt
-  version: 7509ea0149989b38d608f5c1b85e12c57a43379b
-  repo: https://github.com/ProtonMail/bcrypt.git
+  version: c3cd44c1e20fec46baad45b108a45be93394dc8d
 - name: golang.org/x/crypto
   version: 26363818da67edd6e5591bcfac10765337b0ee39
   repo: https://github.com/ProtonMail/crypto.git
@@ -14,6 +13,9 @@ imports:
   - curve25519
   - ed25519
   - ed25519/internal/edwards25519
+  - internal/randutil
+  - internal/syscall/unix
+  - openpgp
   - openpgp/aes/keywrap
   - openpgp/armor
   - openpgp/clearsign
@@ -25,4 +27,6 @@ imports:
   - openpgp/internal/encoding
   - openpgp/packet
   - openpgp/s2k
+  - rand
+  - rsa
 testImports: []
