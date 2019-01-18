@@ -12,15 +12,30 @@ import (
 	"github.com/jameskeane/bcrypt"
 )
 
-// FIXME: These leak information by using non constant-time encoding
+//based64DotSlash Bcrypt uses an adapted base64 alphabet (using . instead of +, starting with ./ and with no padding).
+var based64DotSlash = base64.NewEncoding("./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789").WithPadding(base64.NoPadding)
 
-// BCryptHash function bcrypt algorithm to hash password with salt
-func BCryptHash(password string, salt string) (string, error) {
-	return bcrypt.Hash(password, salt)
+// bcryptHash  bcrypt hash function with prefix start strings
+//
+// Parameters:
+//	 - password string: the thing we need to keep secret and to a hash. mostly the passwords
+//	 - encodedSalt string: a salt must encoded with based64DotSlash. the salt size before encoded is 128 bits for our workflow
+// Returns:
+//   - hashed string: a hashed password
+//   - err error: throw error
+// Usage:
+//
+func bcryptHash(password string, encodedSalt string) (hashed string, err error) {
+	realSalt := "$2a$10$" + encodedSalt
+	hashed, err = bcrypt.Hash(password, realSalt)
+	if len(hashed) > 4 {
+		hashed = "$2y$" + hashed[4:]
+	}
+	return
 }
 
-// ExpandHash extends the byte data for SRP flow
-func ExpandHash(data []byte) []byte {
+// expandHash extends the byte data for SRP flow
+func expandHash(data []byte) []byte {
 	part0 := sha512.Sum512(append(data, 0))
 	part1 := sha512.Sum512(append(data, 1))
 	part2 := sha512.Sum512(append(data, 2))
@@ -31,6 +46,20 @@ func ExpandHash(data []byte) []byte {
 		part2[:],
 		part3[:],
 	}, []byte{})
+}
+
+// MailboxPassword get mailbox password hash
+//
+// Parameters:
+//	 - password string: a mailbox password
+//	 - salt []byte: a salt is random 128 bits data
+// Returns:
+//   - hashed string: a hashed password
+//   - err error: throw error
+func MailboxPassword(password string, salt []byte) (hashed string, err error) {
+	encodedSalt := based64DotSlash.EncodeToString(salt)
+	hashed, err = bcryptHash(password, encodedSalt)
+	return
 }
 
 // HashPassword returns the hash of password argument. Based on version number
@@ -52,9 +81,9 @@ func HashPassword(authVersion int, password, userName string, salt, modulus []by
 	}
 }
 
-// CleanUserName returns the input string in lower-case without characters `_`,
+// cleanUserName returns the input string in lower-case without characters `_`,
 // `.` and `-`.
-func CleanUserName(userName string) string {
+func cleanUserName(userName string) string {
 	userName = strings.Replace(userName, "-", "", -1)
 	userName = strings.Replace(userName, ".", "", -1)
 	userName = strings.Replace(userName, "_", "", -1)
@@ -62,28 +91,28 @@ func CleanUserName(userName string) string {
 }
 
 func hashPasswordVersion3(password string, salt, modulus []byte) (res []byte, err error) {
-	encodedSalt := base64.NewEncoding("./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789").WithPadding(base64.NoPadding).EncodeToString(append(salt, []byte("proton")...))
-	crypted, err := BCryptHash(password, "$2y$10$"+encodedSalt)
+	encodedSalt := based64DotSlash.EncodeToString(append(salt, []byte("proton")...))
+	crypted, err := bcryptHash(password, encodedSalt)
 	if err != nil {
 		return
 	}
 
-	return ExpandHash(append([]byte(crypted), modulus...)), nil
+	return expandHash(append([]byte(crypted), modulus...)), nil
 }
 
 func hashPasswordVersion2(password, userName string, modulus []byte) (res []byte, err error) {
-	return hashPasswordVersion1(password, CleanUserName(userName), modulus)
+	return hashPasswordVersion1(password, cleanUserName(userName), modulus)
 }
 
 func hashPasswordVersion1(password, userName string, modulus []byte) (res []byte, err error) {
 	prehashed := md5.Sum([]byte(strings.ToLower(userName)))
 	encodedSalt := hex.EncodeToString(prehashed[:])
-	crypted, err := BCryptHash(password, "$2y$10$"+encodedSalt)
+	crypted, err := bcryptHash(password, encodedSalt)
 	if err != nil {
 		return
 	}
 
-	return ExpandHash(append([]byte(crypted), modulus...)), nil
+	return expandHash(append([]byte(crypted), modulus...)), nil
 }
 
 func hashPasswordVersion0(password, userName string, modulus []byte) (res []byte, err error) {

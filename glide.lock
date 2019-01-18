@@ -1,10 +1,10 @@
 hash: 5c2c259943e4ab35ec66b3bea8a0d2fc2de75b1e431c66ec11e8493aa90e7ff1
-updated: 2019-01-14T22:04:20.18859-08:00
+updated: 2019-01-15T23:47:16.664888-08:00
 imports:
 - name: github.com/jameskeane/bcrypt
   version: c3cd44c1e20fec46baad45b108a45be93394dc8d
 - name: golang.org/x/crypto
-  version: 26363818da67edd6e5591bcfac10765337b0ee39
+  version: 9e4251120d8c43f10024d798bc6dde21d40704a0
   repo: https://github.com/ProtonMail/crypto.git
   subpackages:
   - bitcurves

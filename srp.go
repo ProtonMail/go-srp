@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"math/big"
 
 	"golang.org/x/crypto/openpgp"
@@ -17,6 +18,8 @@ var (
 
 	// ErrInvalidSignature invalid modulus signature
 	ErrInvalidSignature = errors.New("pm-srp: invalid modulus signature")
+
+	version string = "undefined"
 )
 
 // Store random reader in a variable to be able to overwrite it in tests
@@ -30,10 +33,10 @@ type Proofs struct {
 	ClientProof, ClientEphemeral, ExpectedServerProof []byte
 }
 
-// AuthInfo stores byte data for the calculation of SRP proofs.
-//  * Changed SrpAuto to AuthInfo because the name will be used as srp.SrpAuto by other packages and as SrpSrpAuth on mobile
-//  * Also the data from the API called AuthInfo. it could be match the meaning and reduce the confusion
-type AuthInfo struct {
+// Auth stores byte data for the calculation of SRP proofs.
+//  * Changed SrpAuto to Auth because the name will be used as srp.SrpAuto by other packages and as SrpSrpAuth on mobile
+//  * Also the data from the API called Auth. it could be match the meaning and reduce the confusion
+type Auth struct {
 	Modulus, ServerEphemeral, HashedPassword []byte
 }
 
@@ -77,11 +80,24 @@ func GetModulusKey() string {
 	return modulusPubkey
 }
 
-// NewAuthInfo Creates new SrpAuth from strings input. Salt and server ephemeral are in
+// NewAuth Creates new Auth from strings input. Salt and server ephemeral are in
 // base64 format. Modulus is base64 with signature attached. The signature is
 // verified against server key. The version controls password hash algorithm.
-func NewAuthInfo(version int, username, password, salt, signedModulus, serverEphemeral string) (auth *AuthInfo, err error) {
-	data := &AuthInfo{}
+//
+// Parameters:
+//	 - version int: The *x* component of the vector.
+//	 - username string: The *y* component of the vector.
+//	 - password string: The *z* component of the vector.
+// 	 - salt string:
+// Returns:
+//   - auth *Auth: the pre caculated auth information
+//   - err error: throw error
+// Usage:
+//
+// Warnings:
+//	 - Be carefull! Poos can hurt.
+func NewAuth(version int, username, password, salt, signedModulus, serverEphemeral string) (auth *Auth, err error) {
+	data := &Auth{}
 
 	// Modulus
 	var modulus string
@@ -101,6 +117,7 @@ func NewAuthInfo(version int, username, password, salt, signedModulus, serverEph
 		if err != nil {
 			return
 		}
+		fmt.Println(decodedSalt)
 	}
 	data.HashedPassword, err = HashPassword(version, password, username, decodedSalt, data.Modulus)
 	if err != nil {
@@ -117,27 +134,67 @@ func NewAuthInfo(version int, username, password, salt, signedModulus, serverEph
 	return
 }
 
-// GenerateProofs calculates SPR proofs.
-func (s *AuthInfo) GenerateProofs(length int) (res *Proofs, err error) {
-	toInt := func(arr []byte) *big.Int {
-		var reversed = make([]byte, len(arr))
-		for i := 0; i < len(arr); i++ {
-			reversed[len(arr)-i-1] = arr[i]
-		}
-		return big.NewInt(0).SetBytes(reversed)
+// NewAuthForVerifier Creates new Auth from strings input. Salt and server ephemeral are in
+// base64 format. Modulus is base64 with signature attached. The signature is
+// verified against server key. The version controls password hash algorithm.
+//
+// Parameters:
+//	 - version int: The *x* component of the vector.
+//	 - username string: The *y* component of the vector.
+//	 - password string: The *z* component of the vector.
+// 	 - salt string:
+// Returns:
+//   - auth *Auth: the pre caculated auth information
+//   - err error: throw error
+// Usage:
+//
+// Warnings:
+//	 - none.
+func NewAuthForVerifier(password, signedModulus string, rawSalt []byte) (auth *Auth, err error) {
+	data := &Auth{}
+
+	// Modulus
+	var modulus string
+	modulus, err = readClearSignedMessage(signedModulus)
+	if err != nil {
+		return
+	}
+	data.Modulus, err = base64.StdEncoding.DecodeString(modulus)
+	if err != nil {
+		return
 	}
 
-	fromInt := func(num *big.Int) []byte {
-		var arr = num.Bytes()
-		var reversed = make([]byte, length/8)
-		for i := 0; i < len(arr); i++ {
-			reversed[len(arr)-i-1] = arr[i]
-		}
-		return reversed
+	// hash version is 4
+	data.HashedPassword, err = hashPasswordVersion3(password, rawSalt, data.Modulus)
+	if err != nil {
+		return
 	}
+	auth = data
+	return
+}
+
+func toInt(arr []byte) *big.Int {
+	var reversed = make([]byte, len(arr))
+	for i := 0; i < len(arr); i++ {
+		reversed[len(arr)-i-1] = arr[i]
+	}
+	return big.NewInt(0).SetBytes(reversed)
+}
+
+func fromInt(bitLength int, num *big.Int) []byte {
+	var arr = num.Bytes()
+	var reversed = make([]byte, bitLength/8)
+	for i := 0; i < len(arr); i++ {
+		reversed[len(arr)-i-1] = arr[i]
+	}
+	return reversed
+}
+
+// GenerateProofs calculates SPR proofs.
+func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
 
 	generator := big.NewInt(2)
-	multiplier := toInt(ExpandHash(append(fromInt(generator), s.Modulus...)))
+	multiplier := toInt(expandHash(append(fromInt(bitLength, generator), s.Modulus...)))
 
 	modulus := toInt(s.Modulus)
 	serverEphemeral := toInt(s.ServerEphemeral)
@@ -145,7 +202,7 @@ func (s *AuthInfo) GenerateProofs(length int) (res *Proofs, err error) {
 
 	modulusMinusOne := big.NewInt(0).Sub(modulus, big.NewInt(1))
 
-	if modulus.BitLen() != length {
+	if modulus.BitLen() != bitLength {
 		return nil, errors.New("pm-srp: SRP modulus has incorrect size")
 	}
 
@@ -183,13 +240,13 @@ func (s *AuthInfo) GenerateProofs(length int) (res *Proofs, err error) {
 				return
 			}
 
-			if clientSecret.Cmp(big.NewInt(int64(length*2))) > 0 { // Very likely
+			if clientSecret.Cmp(big.NewInt(int64(bitLength*2))) > 0 { // Very likely
 				break
 			}
 		}
 
 		clientEphemeral = big.NewInt(0).Exp(generator, clientSecret, modulus)
-		scramblingParam = toInt(ExpandHash(append(fromInt(clientEphemeral), fromInt(serverEphemeral)...)))
+		scramblingParam = toInt(expandHash(append(fromInt(bitLength, clientEphemeral), fromInt(bitLength, serverEphemeral)...)))
 		if scramblingParam.Cmp(big.NewInt(0)) != 0 { // Very likely
 			break
 		}
@@ -202,13 +259,28 @@ func (s *AuthInfo) GenerateProofs(length int) (res *Proofs, err error) {
 	exponent := big.NewInt(0).Mod(big.NewInt(0).Add(big.NewInt(0).Mul(scramblingParam, hashedPassword), clientSecret), modulusMinusOne)
 	sharedSession := big.NewInt(0).Exp(subtracted, exponent, modulus)
 
-	clientProof := ExpandHash(bytes.Join([][]byte{fromInt(clientEphemeral), fromInt(serverEphemeral), fromInt(sharedSession)}, []byte{}))
-	serverProof := ExpandHash(bytes.Join([][]byte{fromInt(clientEphemeral), clientProof, fromInt(sharedSession)}, []byte{}))
+	clientProof := expandHash(bytes.Join([][]byte{fromInt(bitLength, clientEphemeral), fromInt(bitLength, serverEphemeral), fromInt(bitLength, sharedSession)}, []byte{}))
+	serverProof := expandHash(bytes.Join([][]byte{fromInt(bitLength, clientEphemeral), clientProof, fromInt(bitLength, sharedSession)}, []byte{}))
 
-	return &Proofs{ClientEphemeral: fromInt(clientEphemeral), ClientProof: clientProof, ExpectedServerProof: serverProof}, nil
+	return &Proofs{ClientEphemeral: fromInt(bitLength, clientEphemeral), ClientProof: clientProof, ExpectedServerProof: serverProof}, nil
 }
 
 // GenerateVerifier verifier for update pwds and create accounts
-func (s *AuthInfo) GenerateVerifier(length int) ([]byte, error) {
-	return nil, errors.New("pm-srp: the client doesn't need SRP GenerateVerifier")
+func (s *Auth) GenerateVerifier(bitLength int) ([]byte, error) {
+	modulus := toInt(s.Modulus)
+	generator := big.NewInt(2)
+
+	hashedPassword := toInt(s.HashedPassword)
+	calModPow := big.NewInt(0).Exp(generator, hashedPassword, modulus)
+	return fromInt(bitLength, calModPow), nil
+}
+
+func RandomBits(bits int) ([]byte, error) {
+	return RandomBytes(bits / 8)
+}
+
+func RandomBytes(byes int) (raw []byte, err error) {
+	raw = make([]byte, 64)
+	_, err = rand.Read(raw)
+	return
 }

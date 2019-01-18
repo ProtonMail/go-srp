@@ -10,25 +10,57 @@
 #include "Universe.objc.h"
 
 
-@class SrpAuthInfo;
+@class SrpAuth;
 @class SrpProofs;
 
 /**
- * AuthInfo stores byte data for the calculation of SRP proofs.
- * Changed SrpAuto to AuthInfo because the name will be used as srp.SrpAuto by other packages and as SrpSrpAuth on mobile
- * Also the data from the API called AuthInfo. it could be match the meaning and reduce the confusion
+ * Auth stores byte data for the calculation of SRP proofs.
+ * Changed SrpAuto to Auth because the name will be used as srp.SrpAuto by other packages and as SrpSrpAuth on mobile
+ * Also the data from the API called Auth. it could be match the meaning and reduce the confusion
  */
-@interface SrpAuthInfo : NSObject <goSeqRefInterface> {
+@interface SrpAuth : NSObject <goSeqRefInterface> {
 }
 @property(strong, readonly) id _ref;
 
 - (instancetype)initWithRef:(id)ref;
 /**
- * NewAuthInfo Creates new SrpAuth from strings input. Salt and server ephemeral are in
+ * NewAuth Creates new Auth from strings input. Salt and server ephemeral are in
 base64 format. Modulus is base64 with signature attached. The signature is
 verified against server key. The version controls password hash algorithm.
+
+Parameters:
+	 - version int: The *x* component of the vector.
+	 - username string: The *y* component of the vector.
+	 - password string: The *z* component of the vector.
+	 - salt string:
+Returns:
+  - auth *Auth: the pre caculated auth information
+  - err error: throw error
+Usage:
+
+Warnings:
+	 - Be carefull! Poos can hurt.
  */
 - (instancetype)init:(long)version username:(NSString*)username password:(NSString*)password salt:(NSString*)salt signedModulus:(NSString*)signedModulus serverEphemeral:(NSString*)serverEphemeral;
+/**
+ * NewAuthForVerifier Creates new Auth from strings input. Salt and server ephemeral are in
+base64 format. Modulus is base64 with signature attached. The signature is
+verified against server key. The version controls password hash algorithm.
+
+Parameters:
+	 - version int: The *x* component of the vector.
+	 - username string: The *y* component of the vector.
+	 - password string: The *z* component of the vector.
+	 - salt string:
+Returns:
+  - auth *Auth: the pre caculated auth information
+  - err error: throw error
+Usage:
+
+Warnings:
+	 - none.
+ */
+- (instancetype)initForVerifier:(NSString*)password signedModulus:(NSString*)signedModulus rawSalt:(NSData*)rawSalt;
 - (NSData*)modulus;
 - (void)setModulus:(NSData*)v;
 - (NSData*)serverEphemeral;
@@ -38,11 +70,11 @@ verified against server key. The version controls password hash algorithm.
 /**
  * GenerateProofs calculates SPR proofs.
  */
-- (SrpProofs*)generateProofs:(long)length error:(NSError**)error;
+- (SrpProofs*)generateProofs:(long)bitLength error:(NSError**)error;
 /**
  * GenerateVerifier verifier for update pwds and create accounts
  */
-- (NSData*)generateVerifier:(long)length error:(NSError**)error;
+- (NSData*)generateVerifier:(long)bitLength error:(NSError**)error;
 @end
 
 /**
@@ -107,10 +139,45 @@ following arguments are used in addition to password:
 FOUNDATION_EXPORT NSData* SrpHashPassword(long authVersion, NSString* password, NSString* userName, NSData* salt, NSData* modulus, NSError** error);
 
 /**
- * NewAuthInfo Creates new SrpAuth from strings input. Salt and server ephemeral are in
+ * NewAuth Creates new Auth from strings input. Salt and server ephemeral are in
 base64 format. Modulus is base64 with signature attached. The signature is
 verified against server key. The version controls password hash algorithm.
+
+Parameters:
+	 - version int: The *x* component of the vector.
+	 - username string: The *y* component of the vector.
+	 - password string: The *z* component of the vector.
+	 - salt string:
+Returns:
+  - auth *Auth: the pre caculated auth information
+  - err error: throw error
+Usage:
+
+Warnings:
+	 - Be carefull! Poos can hurt.
  */
-FOUNDATION_EXPORT SrpAuthInfo* SrpNewAuthInfo(long version, NSString* username, NSString* password, NSString* salt, NSString* signedModulus, NSString* serverEphemeral, NSError** error);
+FOUNDATION_EXPORT SrpAuth* SrpNewAuth(long version, NSString* username, NSString* password, NSString* salt, NSString* signedModulus, NSString* serverEphemeral, NSError** error);
+
+/**
+ * NewAuthForVerifier Creates new Auth from strings input. Salt and server ephemeral are in
+base64 format. Modulus is base64 with signature attached. The signature is
+verified against server key. The version controls password hash algorithm.
+
+Parameters:
+	 - version int: The *x* component of the vector.
+	 - username string: The *y* component of the vector.
+	 - password string: The *z* component of the vector.
+	 - salt string:
+Returns:
+  - auth *Auth: the pre caculated auth information
+  - err error: throw error
+Usage:
+
+Warnings:
+	 - none.
+ */
+FOUNDATION_EXPORT SrpAuth* SrpNewAuthForVerifier(NSString* password, NSString* signedModulus, NSData* rawSalt, NSError** error);
+
+FOUNDATION_EXPORT NSString* SrpVersionNumber(void);
 
 #endif
