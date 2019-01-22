@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"math/big"
 
 	"golang.org/x/crypto/openpgp"
@@ -117,7 +116,6 @@ func NewAuth(version int, username, password, salt, signedModulus, serverEphemer
 		if err != nil {
 			return
 		}
-		fmt.Println(decodedSalt)
 	}
 	data.HashedPassword, err = HashPassword(version, password, username, decodedSalt, data.Modulus)
 	if err != nil {
@@ -280,7 +278,7 @@ func RandomBits(bits int) ([]byte, error) {
 }
 
 func RandomBytes(byes int) (raw []byte, err error) {
-	raw = make([]byte, 64)
+	raw = make([]byte, byes)
 	_, err = rand.Read(raw)
 	return
 }
