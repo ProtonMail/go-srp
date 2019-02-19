@@ -17,12 +17,12 @@ var (
 
 	// ErrInvalidSignature invalid modulus signature
 	ErrInvalidSignature = errors.New("pm-srp: invalid modulus signature")
-
-	version string = "undefined"
+	
+	version string      = "undefined"
+	RandReader          = rand.Reader
 )
 
 // Store random reader in a variable to be able to overwrite it in tests
-var randReader = rand.Reader
 
 // Proofs Srp Proofs object. Changed SrpProofs to Proofs because the name will be used as srp.SrpProofs by other packages and as SrpSrpProofs on mobile
 // ClientProof []byte  client proof
@@ -222,7 +222,7 @@ func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
 	var clientSecret, clientEphemeral, scramblingParam *big.Int
 	for {
 		for {
-			clientSecret, err = rand.Int(randReader, modulusMinusOne)
+			clientSecret, err = rand.Int(RandReader, modulusMinusOne)
 			if err != nil {
 				return
 			}

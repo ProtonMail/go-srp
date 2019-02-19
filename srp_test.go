@@ -31,7 +31,7 @@ kvNM7qIK
 func init() {
 	// Only for tests, replace the default random reader by something that always
 	// return the same thing
-	randReader = rand.New(rand.NewSource(42))
+	RandReader = rand.New(rand.NewSource(42))
 }
 
 func TestReadClearSigned(t *testing.T) {
