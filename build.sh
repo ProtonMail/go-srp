@@ -7,8 +7,6 @@ ANDROID_OUT=${OUTPUT_PATH}/"Android"
 IOS_OUT=${OUTPUT_PATH}/"iOS"
 macOS_OUT=${OUTPUT_PATH}/"macOS"
 
-# CHECK="${1-0}"
-# if [ ${CHECK} -eq "1" ]; then
 printf "\e[0;32mStart Building iOS framework .. Location: ${IOS_OUT} \033[0m\n\n"
 
 gomobile bind -target ios -ldflags="-s -w -X srp.Version=$(git describe --always --long --dirty)" -o ${IOS_OUT}/Srp.framework 

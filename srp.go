@@ -17,12 +17,12 @@ var (
 
 	// ErrInvalidSignature invalid modulus signature
 	ErrInvalidSignature = errors.New("pm-srp: invalid modulus signature")
-
-	version string = "undefined"
+	
+	version string      = "undefined"
+	RandReader          = rand.Reader
 )
 
 // Store random reader in a variable to be able to overwrite it in tests
-var randReader = rand.Reader
 
 // Proofs Srp Proofs object. Changed SrpProofs to Proofs because the name will be used as srp.SrpProofs by other packages and as SrpSrpProofs on mobile
 // ClientProof []byte  client proof
@@ -40,18 +40,7 @@ type Auth struct {
 }
 
 // Amored pubkey for modulus verification
-const modulusPubkey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
-
-xjMEXAHLgxYJKwYBBAHaRw8BAQdAFurWXXwjTemqjD7CXjXVyKf0of7n9Ctm
-L8v9enkzggHNEnByb3RvbkBzcnAubW9kdWx1c8J3BBAWCgApBQJcAcuDBgsJ
-BwgDAgkQNQWFxOlRjyYEFQgKAgMWAgECGQECGwMCHgEAAPGRAP9sauJsW12U
-MnTQUZpsbJb53d0Wv55mZIIiJL2XulpWPQD/V6NglBd96lZKBmInSXX/kXat
-Sv+y0io+LR8i2+jV+AbOOARcAcuDEgorBgEEAZdVAQUBAQdAeJHUz1c9+KfE
-kSIgcBRE3WuXC4oj5a2/U3oASExGDW4DAQgHwmEEGBYIABMFAlwBy4MJEDUF
-hcTpUY8mAhsMAAD/XQD8DxNI6E78meodQI+wLsrKLeHn32iLvUqJbVDhfWSU
-WO4BAMcm1u02t4VKw++ttECPt+HUgPUq5pqQWe5Q2cW4TMsE
-=Y4Mw
------END PGP PUBLIC KEY BLOCK-----`
+const modulusPubkey = "-----BEGIN PGP PUBLIC KEY BLOCK-----\r\n\r\nxjMEXAHLgxYJKwYBBAHaRw8BAQdAFurWXXwjTemqjD7CXjXVyKf0of7n9Ctm\r\nL8v9enkzggHNEnByb3RvbkBzcnAubW9kdWx1c8J3BBAWCgApBQJcAcuDBgsJ\r\nBwgDAgkQNQWFxOlRjyYEFQgKAgMWAgECGQECGwMCHgEAAPGRAP9sauJsW12U\r\nMnTQUZpsbJb53d0Wv55mZIIiJL2XulpWPQD/V6NglBd96lZKBmInSXX/kXat\r\nSv+y0io+LR8i2+jV+AbOOARcAcuDEgorBgEEAZdVAQUBAQdAeJHUz1c9+KfE\r\nkSIgcBRE3WuXC4oj5a2/U3oASExGDW4DAQgHwmEEGBYIABMFAlwBy4MJEDUF\r\nhcTpUY8mAhsMAAD/XQD8DxNI6E78meodQI+wLsrKLeHn32iLvUqJbVDhfWSU\r\nWO4BAMcm1u02t4VKw++ttECPt+HUgPUq5pqQWe5Q2cW4TMsE\r\n=Y4Mw\r\n-----END PGP PUBLIC KEY BLOCK-----"
 
 // readClearSignedMessage reads the clear text from signed message and verifies
 // signature. There must be no data appended after signed message in input string.
@@ -233,7 +222,7 @@ func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
 	var clientSecret, clientEphemeral, scramblingParam *big.Int
 	for {
 		for {
-			clientSecret, err = rand.Int(randReader, modulusMinusOne)
+			clientSecret, err = rand.Int(RandReader, modulusMinusOne)
 			if err != nil {
 				return
 			}
