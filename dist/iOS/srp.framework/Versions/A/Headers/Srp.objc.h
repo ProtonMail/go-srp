@@ -112,22 +112,6 @@ ExpectedServerProof []byte
 
 @end
 
-/**
- * BCryptHash function bcrypt algorithm to hash password with salt
- */
-FOUNDATION_EXPORT NSString* SrpBCryptHash(NSString* password, NSString* salt, NSError** error);
-
-/**
- * CleanUserName returns the input string in lower-case without characters `_`,
-`.` and `-`.
- */
-FOUNDATION_EXPORT NSString* SrpCleanUserName(NSString* userName);
-
-/**
- * ExpandHash extends the byte data for SRP flow
- */
-FOUNDATION_EXPORT NSData* SrpExpandHash(NSData* data);
-
 FOUNDATION_EXPORT NSString* SrpGetModulusKey(void);
 
 /**
@@ -137,6 +121,18 @@ following arguments are used in addition to password:
 * 3, 4: salt and modulus
  */
 FOUNDATION_EXPORT NSData* SrpHashPassword(long authVersion, NSString* password, NSString* userName, NSData* salt, NSData* modulus, NSError** error);
+
+/**
+ * MailboxPassword get mailbox password hash
+
+Parameters:
+	 - password string: a mailbox password
+	 - salt []byte: a salt is random 128 bits data
+Returns:
+  - hashed string: a hashed password
+  - err error: throw error
+ */
+FOUNDATION_EXPORT NSString* SrpMailboxPassword(NSString* password, NSData* salt, NSError** error);
 
 /**
  * NewAuth Creates new Auth from strings input. Salt and server ephemeral are in
@@ -177,6 +173,10 @@ Warnings:
 	 - none.
  */
 FOUNDATION_EXPORT SrpAuth* SrpNewAuthForVerifier(NSString* password, NSString* signedModulus, NSData* rawSalt, NSError** error);
+
+FOUNDATION_EXPORT NSData* SrpRandomBits(long bits, NSError** error);
+
+FOUNDATION_EXPORT NSData* SrpRandomBytes(long byes, NSError** error);
 
 FOUNDATION_EXPORT NSString* SrpVersionNumber(void);
 
