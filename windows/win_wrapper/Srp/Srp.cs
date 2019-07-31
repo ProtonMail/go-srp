@@ -23,7 +23,7 @@ namespace ProtonMail.Srp
         public struct GoString
         {
             public IntPtr p;
-            public int n;
+            public IntPtr n;
 
             public void Free()
             {
@@ -40,9 +40,10 @@ namespace ProtonMail.Srp
 
         public static string ConvertToString(this GoString goStr)
         {
+            var length = goStr.n.ToInt32();
             // becarefull the encoding. use utf8 for now but maybe ascii better
-            byte[] bytes = new byte[goStr.n];
-            for (int i = 0; i < goStr.n; i++)
+            byte[] bytes = new byte[length];
+            for (int i = 0; i < length; i++)
                 bytes[i] = Marshal.ReadByte(goStr.p, i);
             string s = Encoding.UTF8.GetString(bytes);
             return s;
@@ -66,7 +67,7 @@ namespace ProtonMail.Srp
             GoString goStr = new GoString
             {
                 p = nativeUtf8,
-                n = buffer.Length
+                n = (IntPtr) buffer.Length
             };
             return goStr;
         }
