@@ -2,7 +2,7 @@
 
 ## Introduction
 
-srp libaray used in all protonmail clients
+srp libaray used in all Protonmail clients
 
 ## License
 
@@ -11,13 +11,14 @@ Copyright (c) 2019 Proton Technologies AG
 Please see [LICENSE](LICENSE.txt) file for the license.
 
 ## Doc 
+
 [Secure Remote Password (SRP) Protocol](https://protonmail.com/blog/encrypted_email_authentication/)
 
 ## Folders
 
-the root folder contains the main logic.
+The `root` folder contains the main logic.
 
-windows forder contains the warpper for .net.
+The `windows` folder contains the warpper for .net.
 
 ## Setup
 
@@ -45,7 +46,7 @@ Go Mobile wiki: https://github.com/golang/go/wiki/Mobile
 
 #### Other notes
 
-If you wish to use build.sh, you may need to modify the paths in it.
+If you wish to use `build.sh`, you may need to modify the paths in it.
 
 #### use go mod
 
@@ -64,7 +65,7 @@ glide i
 ./build.sh
 ```
 
-### Dependicy
+### Dependencies
 
 [bcrypt](https://github.com/jameskeane/bcrypt)
 
