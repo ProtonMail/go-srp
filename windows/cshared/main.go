@@ -26,7 +26,7 @@ import "C"
 import (
 	"bytes"
 	"encoding/binary"
-	srp "go-srp" //this could hange to repo link
+	srp "github.com/ProtonMail/go-srp" //this could hange to repo link
 	"math/rand"
 )
 
