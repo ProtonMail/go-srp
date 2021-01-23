@@ -31,6 +31,7 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
 	"github.com/ProtonMail/go-crypto/rand"
+	"github.com/coyim/constbn"
 )
 
 var (
@@ -199,15 +200,35 @@ func fromInt(bitLength int, num *big.Int) []byte {
 	return reversed
 }
 
+func toConstInt(arr []byte) *constbn.Int {
+	var reversed = make([]byte, len(arr))
+	for i := 0; i < len(arr); i++ {
+		reversed[len(arr)-i-1] = arr[i]
+	}
+	num := &constbn.Int{}
+	num.SetBytes(reversed)
+	return num
+}
+
+func fromConstInt(bitLength int, num *constbn.Int) []byte {
+	var arr = num.Bytes()
+	var reversed = make([]byte, bitLength/8)
+	for i := 0; i < len(arr); i++ {
+		reversed[len(arr)-i-1] = arr[i]
+	}
+	return reversed
+}
+
 // GenerateProofs calculates SPR proofs.
 func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
-
 	generator := big.NewInt(2)
+	constGenerator := &constbn.Int{}
+	constGenerator.SetBigInt(generator)
+
 	multiplier := toInt(expandHash(append(fromInt(bitLength, generator), s.Modulus...)))
 
 	modulus := toInt(s.Modulus)
 	serverEphemeral := toInt(s.ServerEphemeral)
-	hashedPassword := toInt(s.HashedPassword)
 
 	modulusMinusOne := big.NewInt(0).Sub(modulus, big.NewInt(1))
 
@@ -241,7 +262,11 @@ func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
 		return nil, errors.New("pm-srp: SRP modulus is not a safe prime")
 	}
 
-	var clientSecret, clientEphemeral, scramblingParam *big.Int
+	var scramblingParam, clientSecret *big.Int
+	constClientEphemeral := &constbn.Int{}
+	constClientSecret := &constbn.Int{}
+	constModulus := toConstInt(s.Modulus)
+
 	for {
 		for {
 			clientSecret, err = rand.Int(RandReader, modulusMinusOne)
@@ -253,43 +278,63 @@ func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
 				break
 			}
 		}
+		constClientSecret.SetBigInt(clientSecret)
+		constClientEphemeral.Exp(constGenerator, constClientSecret, constModulus)
 
-		clientEphemeral = big.NewInt(0).Exp(generator, clientSecret, modulus)
-		scramblingParam = toInt(expandHash(append(fromInt(bitLength, clientEphemeral), fromInt(bitLength, serverEphemeral)...)))
+		scramblingParam = toInt(expandHash(append(fromConstInt(bitLength, constClientEphemeral), fromInt(bitLength, serverEphemeral)...)))
 		if scramblingParam.Cmp(big.NewInt(0)) != 0 { // Very likely
 			break
 		}
 	}
+	constVerifier := constbn.Int{}
+	constVerifier.Exp(constGenerator, toConstInt(s.HashedPassword), constModulus)
 
-	subtracted := big.NewInt(0).Sub(serverEphemeral, big.NewInt(0).Mod(big.NewInt(0).Mul(big.NewInt(0).Exp(generator, hashedPassword, modulus), multiplier), modulus))
+	subtracted := big.NewInt(0).Sub(
+		serverEphemeral,
+		big.NewInt(0).Mod(big.NewInt(0).Mul(constVerifier.GetBigInt(), multiplier), modulus),
+	)
+
 	if subtracted.Cmp(big.NewInt(0)) < 0 {
 		subtracted.Add(subtracted, modulus)
 	}
-	exponent := big.NewInt(0).Mod(big.NewInt(0).Add(big.NewInt(0).Mul(scramblingParam, hashedPassword), clientSecret), modulusMinusOne)
-	sharedSession := big.NewInt(0).Exp(subtracted, exponent, modulus)
+	exponent := big.NewInt(0).Mod(big.NewInt(0).Add(big.NewInt(0).
+		Mul(scramblingParam, toInt(s.HashedPassword)), clientSecret), modulusMinusOne)
 
-	clientProof := expandHash(bytes.Join([][]byte{fromInt(bitLength, clientEphemeral), fromInt(bitLength, serverEphemeral), fromInt(bitLength, sharedSession)}, []byte{}))
-	serverProof := expandHash(bytes.Join([][]byte{fromInt(bitLength, clientEphemeral), clientProof, fromInt(bitLength, sharedSession)}, []byte{}))
+	constSubtracted := &constbn.Int{}
+	constExponent := &constbn.Int{}
+	constSharedSession := &constbn.Int{}
 
-	return &Proofs{ClientEphemeral: fromInt(bitLength, clientEphemeral), ClientProof: clientProof, ExpectedServerProof: serverProof}, nil
+	constSubtracted.SetBigInt(subtracted)
+	constExponent.SetBigInt(exponent)
+
+	constSharedSession.Exp(constSubtracted, constExponent, constModulus)
+
+	clientProof := expandHash(bytes.Join([][]byte{
+		fromConstInt(bitLength, constClientEphemeral),
+		fromInt(bitLength, serverEphemeral),
+		fromConstInt(bitLength, constSharedSession),
+	}, []byte{}))
+
+	serverProof := expandHash(bytes.Join([][]byte{
+		fromConstInt(bitLength, constClientEphemeral), clientProof,
+		fromConstInt(bitLength, constSharedSession),
+	}, []byte{}))
+
+	return &Proofs{
+		ClientEphemeral: fromConstInt(bitLength, constClientEphemeral),
+		ClientProof: clientProof, ExpectedServerProof: serverProof,
+	}, nil
 }
 
 // GenerateVerifier verifier for update pwds and create accounts
 func (s *Auth) GenerateVerifier(bitLength int) ([]byte, error) {
-	modulus := toInt(s.Modulus)
-	generator := big.NewInt(2)
+	generator := &constbn.Int{}
+	calModPow := &constbn.Int{}
 
-	hashedPassword := toInt(s.HashedPassword)
-	calModPow := big.NewInt(0).Exp(generator, hashedPassword, modulus)
-	return fromInt(bitLength, calModPow), nil
-}
+	generator.SetBigInt(big.NewInt(2))
+	modulus := toConstInt(s.Modulus)
 
-func RandomBits(bits int) ([]byte, error) {
-	return RandomBytes(bits / 8)
-}
-
-func RandomBytes(byes int) (raw []byte, err error) {
-	raw = make([]byte, byes)
-	_, err = rand.Read(raw)
-	return
+	hashedPassword := toConstInt(s.HashedPassword)
+	calModPow.Exp(generator, hashedPassword, modulus)
+	return fromConstInt(bitLength, calModPow), nil
 }

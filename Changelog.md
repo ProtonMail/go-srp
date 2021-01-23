@@ -1,5 +1,12 @@
 # Changelog for SRP
 
+## Unreleased
+### Added
+* Support for SRP server functionality
+
+### Security
+* Use constant time modular exponentiation
+
 ## 2019-01-14
 
 ### Added
