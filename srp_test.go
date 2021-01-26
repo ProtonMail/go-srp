@@ -25,9 +25,12 @@ package srp
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"testing"
+
+	pmrand "github.com/ProtonMail/go-crypto/rand"
 )
 
 const (
@@ -172,5 +175,83 @@ func TestNewAuth(t *testing.T) {
 			// 	t.Errorf("NewAuth() = %v, want %v", gotAuth, tt.wantAuth)
 			// }
 		})
+	}
+}
+
+// TestE2EFlow performs a test with the client and server using real random data.
+func TestE2EFlow(t *testing.T) {
+	RandReader = pmrand.Reader
+
+	var bits = 2048
+	var password = "Password\nabc!!~~ä\r\n"
+
+	rawSalt, err := RandomBytes(10)
+	if err != nil {
+		t.Fatal("Expected no error while generating raw salt, have ", err)
+	}
+
+	verifierAuth, err := NewAuthForVerifier(password, testModulusClearSign, rawSalt)
+	if err != nil {
+		t.Fatal("Expected no error while creating auth for verifier, have ", err)
+	}
+
+	verifier, err := verifierAuth.GenerateVerifier(bits)
+	if err != nil {
+		t.Fatal("Expected no error while generating verifier, have ", err)
+	}
+
+	server, err := NewServerFromSigned(testModulusClearSign, verifier, bits)
+	if err != nil {
+		t.Fatal("Expected no error while creating server, have ", err)
+	}
+
+	challenge, err := server.GenerateChallenge()
+	if err != nil {
+		t.Fatal("Expected no error while generating challenge, have ", err)
+	}
+
+	auth, err := NewAuth(
+		4,
+		"Test",
+		password,
+		base64.StdEncoding.EncodeToString(rawSalt),
+		testModulusClearSign,
+		base64.StdEncoding.EncodeToString(challenge),
+	)
+	if err != nil {
+		t.Fatal("Expected no error while creating auth, have ", err)
+	}
+
+	proofs, err := auth.GenerateProofs(bits)
+	if err != nil {
+		t.Fatal("Expected no error while generating client proofs, have ", err)
+	}
+
+	serverProof, err := server.VerifyProofs(proofs.ClientEphemeral, proofs.ClientProof)
+	if err != nil {
+		t.Fatal("Expected no error while generating server proofs, have ", err)
+	}
+
+	if !server.IsCompleted() {
+		t.Fatal("Expected SRP exchange to be completed, have ", err)
+	}
+
+	if bytes.Compare(proofs.ExpectedServerProof, serverProof) != 0 {
+		t.Fatalf("Expected server proof\n\t'%s'\nbut have\n\t'%s'",
+			hex.EncodeToString(proofs.ExpectedServerProof),
+			hex.EncodeToString(serverProof),
+		)
+	}
+
+	sharedSession, err := server.GetSharedSession()
+	if err != nil {
+		t.Fatal("Expected no error while getting shared session secret, have ", err)
+	}
+
+	if bytes.Compare(proofs.sharedSession, sharedSession) != 0 {
+		t.Fatalf("Expected server proof\n\t'%s'\nbut have\n\t'%s'",
+			hex.EncodeToString(proofs.sharedSession),
+			hex.EncodeToString(sharedSession),
+		)
 	}
 }

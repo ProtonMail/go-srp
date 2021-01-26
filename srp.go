@@ -51,7 +51,7 @@ var (
 // ClientEphemeral []byte  calculated from
 // ExpectedServerProof []byte
 type Proofs struct {
-	ClientProof, ClientEphemeral, ExpectedServerProof []byte
+	ClientProof, ClientEphemeral, ExpectedServerProof, sharedSession []byte
 }
 
 // Auth stores byte data for the calculation of SRP proofs.
@@ -199,11 +199,22 @@ func fromInt(bitLength int, num *big.Int) []byte {
 	return reversed
 }
 
+func computeMultiplier(generator, modulus *big.Int, bitLength int) (*big.Int, error) {
+	modulusMinusOne := big.NewInt(0).Sub(modulus, big.NewInt(1))
+	multiplier := toInt(expandHash(append(fromInt(bitLength, generator), fromInt(bitLength, modulus)...)))
+	multiplier = multiplier.Mod(multiplier, modulus)
+
+	if multiplier.Cmp(big.NewInt(1)) <= 0 || multiplier.Cmp(modulusMinusOne) >= 0 {
+		return nil, errors.New("pm-srp: SRP multiplier is out of bounds")
+	}
+
+	return multiplier, nil
+}
+
 // GenerateProofs calculates SPR proofs.
 func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
 
 	generator := big.NewInt(2)
-	multiplier := toInt(expandHash(append(fromInt(bitLength, generator), s.Modulus...)))
 
 	modulus := toInt(s.Modulus)
 	serverEphemeral := toInt(s.ServerEphemeral)
@@ -215,10 +226,9 @@ func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
 		return nil, errors.New("pm-srp: SRP modulus has incorrect size")
 	}
 
-	multiplier = multiplier.Mod(multiplier, modulus)
-
-	if multiplier.Cmp(big.NewInt(1)) <= 0 || multiplier.Cmp(modulusMinusOne) >= 0 {
-		return nil, errors.New("pm-srp: SRP multiplier is out of bounds")
+	multiplier, err := computeMultiplier(generator, modulus, bitLength)
+	if err != nil {
+		return nil, err
 	}
 
 	if generator.Cmp(big.NewInt(1)) <= 0 || generator.Cmp(modulusMinusOne) >= 0 {
@@ -271,7 +281,12 @@ func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
 	clientProof := expandHash(bytes.Join([][]byte{fromInt(bitLength, clientEphemeral), fromInt(bitLength, serverEphemeral), fromInt(bitLength, sharedSession)}, []byte{}))
 	serverProof := expandHash(bytes.Join([][]byte{fromInt(bitLength, clientEphemeral), clientProof, fromInt(bitLength, sharedSession)}, []byte{}))
 
-	return &Proofs{ClientEphemeral: fromInt(bitLength, clientEphemeral), ClientProof: clientProof, ExpectedServerProof: serverProof}, nil
+	return &Proofs{
+		ClientEphemeral: fromInt(bitLength, clientEphemeral),
+		ClientProof: clientProof,
+		ExpectedServerProof: serverProof,
+		sharedSession: fromInt(bitLength, sharedSession),
+	}, nil
 }
 
 // GenerateVerifier verifier for update pwds and create accounts
