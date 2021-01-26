@@ -259,7 +259,8 @@ func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
 				return
 			}
 
-			if clientSecret.Cmp(big.NewInt(int64(bitLength*2))) > 0 { // Very likely
+			// Prevent g^a from being smaller than the modulus
+			if clientSecret.Cmp(big.NewInt(int64(bitLength*2))) > 0 {
 				break
 			}
 		}

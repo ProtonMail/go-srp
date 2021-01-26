@@ -31,7 +31,8 @@ func NewServer(modulusBytes, verifier []byte, bitLength int) (*Server, error) {
 			return nil, err
 		}
 
-		if secret.Cmp(big.NewInt(int64(bitLength*2))) > 0 { // Very likely
+		// Prevent g^b from being smaller than the modulus
+		if secret.Cmp(big.NewInt(int64(bitLength*2))) > 0 {
 			break
 		}
 	}
