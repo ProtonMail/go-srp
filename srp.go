@@ -97,16 +97,16 @@ func GetModulusKey() string {
 // Parameters:
 //	 - version int: The *x* component of the vector.
 //	 - username string: The *y* component of the vector.
-//	 - password string: The *z* component of the vector.
+//	 - password []byte: The *z* component of the vector.
 // 	 - salt string:
 // Returns:
-//   - auth *Auth: the pre caculated auth information
+//   - auth *Auth: the pre calculated auth information
 //   - err error: throw error
 // Usage:
 //
 // Warnings:
-//	 - Be carefull! Poos can hurt.
-func NewAuth(version int, username, password, salt, signedModulus, serverEphemeral string) (auth *Auth, err error) {
+//	 - Be careful! Poos can hurt.
+func NewAuth(version int, username string, password []byte, b64salt, signedModulus, serverEphemeral string) (auth *Auth, err error) {
 	data := &Auth{}
 
 	// Modulus
@@ -123,7 +123,7 @@ func NewAuth(version int, username, password, salt, signedModulus, serverEphemer
 	// Password
 	var decodedSalt []byte
 	if version >= 3 {
-		decodedSalt, err = base64.StdEncoding.DecodeString(salt)
+		decodedSalt, err = base64.StdEncoding.DecodeString(b64salt)
 		if err != nil {
 			return
 		}
@@ -150,16 +150,16 @@ func NewAuth(version int, username, password, salt, signedModulus, serverEphemer
 // Parameters:
 //	 - version int: The *x* component of the vector.
 //	 - username string: The *y* component of the vector.
-//	 - password string: The *z* component of the vector.
+//	 - password []byte: The *z* component of the vector.
 // 	 - salt string:
 // Returns:
-//   - auth *Auth: the pre caculated auth information
+//   - auth *Auth: the pre calculated auth information
 //   - err error: throw error
 // Usage:
 //
 // Warnings:
 //	 - none.
-func NewAuthForVerifier(password, signedModulus string, rawSalt []byte) (auth *Auth, err error) {
+func NewAuthForVerifier(password []byte, signedModulus string, rawSalt []byte) (auth *Auth, err error) {
 	data := &Auth{}
 
 	// Modulus
