@@ -98,7 +98,7 @@ func GetModulusKey() string {
 //	 - version int: The *x* component of the vector.
 //	 - username string: The *y* component of the vector.
 //	 - password []byte: The *z* component of the vector.
-// 	 - salt string:
+// 	 - b64salt string: The std-base64 formatted salt
 // Returns:
 //   - auth *Auth: the pre calculated auth information
 //   - err error: throw error
