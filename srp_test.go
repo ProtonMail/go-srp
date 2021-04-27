@@ -86,7 +86,7 @@ func TestReadClearSigned(t *testing.T) {
 }
 
 func TestSRPauth(t *testing.T) {
-	srp, err := NewAuth(4, "jakubqa", "abc123", "yKlc5/CvObfoiw==", testModulusClearSign, testServerEphemeral)
+	srp, err := NewAuth(4, "jakubqa", []byte("abc123"), "yKlc5/CvObfoiw==", testModulusClearSign, testServerEphemeral)
 	if err != nil {
 		t.Fatal("Expected no error but have ", err)
 	}
@@ -160,7 +160,7 @@ func TestNewAuth(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotAuth, err := NewAuth(tt.args.version, tt.args.username, tt.args.password, tt.args.salt, tt.args.signedModulus, tt.args.serverEphemeral)
+			gotAuth, err := NewAuth(tt.args.version, tt.args.username, []byte(tt.args.password), tt.args.salt, tt.args.signedModulus, tt.args.serverEphemeral)
 			if gotAuth != nil {
 				fmt.Println(gotAuth.HashedPassword)
 				fmt.Println(gotAuth.Modulus)
@@ -183,7 +183,7 @@ func TestE2EFlow(t *testing.T) {
 	RandReader = pmrand.Reader
 
 	var bits = 2048
-	var password = "Password\nabc!!~~ä\r\n"
+	var password = []byte("Password\nabc!!~~ä\r\n")
 
 	rawSalt, err := RandomBytes(10)
 	if err != nil {

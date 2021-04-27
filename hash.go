@@ -40,18 +40,18 @@ var based64DotSlash = base64.NewEncoding("./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij
 // bcryptHash  bcrypt hash function with prefix start strings
 //
 // Parameters:
-//	 - password string: the thing we need to keep secret and to a hash. mostly the passwords
+//	 - password []byte: the thing we need to keep secret and to a hash. mostly the passwords
 //	 - encodedSalt string: a salt must encoded with based64DotSlash. the salt size before encoded is 128 bits for our workflow
 // Returns:
-//   - hashed string: a hashed password
+//   - hashed []byte: a hashed password
 //   - err error: throw error
 // Usage:
 //
-func bcryptHash(password string, encodedSalt string) (hashed string, err error) {
-	realSalt := "$2a$10$" + encodedSalt
-	hashed, err = bcrypt.Hash(password, realSalt)
+func bcryptHash(password []byte, encodedSalt string) (hashed []byte, err error) {
+	realSalt := []byte("$2a$10$" + encodedSalt)
+	hashed, err = bcrypt.HashBytes(password, realSalt)
 	if len(hashed) > 4 {
-		hashed = "$2y$" + hashed[4:]
+		hashed = append([]byte("$2y$"), hashed[4:]...)
 	}
 	return
 }
@@ -73,12 +73,12 @@ func expandHash(data []byte) []byte {
 // MailboxPassword get mailbox password hash
 //
 // Parameters:
-//	 - password string: a mailbox password
+//	 - password []byte: a mailbox password
 //	 - salt []byte: a salt is random 128 bits data
 // Returns:
-//   - hashed string: a hashed password
+//   - hashed []byte: a hashed password
 //   - err error: throw error
-func MailboxPassword(password string, salt []byte) (hashed string, err error) {
+func MailboxPassword(password []byte, salt []byte) (hashed []byte, err error) {
 	encodedSalt := based64DotSlash.EncodeToString(salt)
 	hashed, err = bcryptHash(password, encodedSalt)
 	return
@@ -88,7 +88,7 @@ func MailboxPassword(password string, salt []byte) (hashed string, err error) {
 // following arguments are used in addition to password:
 // * 0, 1, 2: userName and modulus
 // * 3, 4: salt and modulus
-func HashPassword(authVersion int, password, userName string, salt, modulus []byte) ([]byte, error) {
+func HashPassword(authVersion int, password []byte, userName string, salt, modulus []byte) ([]byte, error) {
 	switch authVersion {
 	case 4, 3:
 		return hashPasswordVersion3(password, salt, modulus)
@@ -112,21 +112,21 @@ func cleanUserName(userName string) string {
 	return strings.ToLower(userName)
 }
 
-func hashPasswordVersion3(password string, salt, modulus []byte) (res []byte, err error) {
+func hashPasswordVersion3(password []byte, salt, modulus []byte) (res []byte, err error) {
 	encodedSalt := based64DotSlash.EncodeToString(append(salt, []byte("proton")...))
 	crypted, err := bcryptHash(password, encodedSalt)
 	if err != nil {
 		return
 	}
 
-	return expandHash(append([]byte(crypted), modulus...)), nil
+	return expandHash(append(crypted, modulus...)), nil
 }
 
-func hashPasswordVersion2(password, userName string, modulus []byte) (res []byte, err error) {
+func hashPasswordVersion2(password []byte, userName string, modulus []byte) (res []byte, err error) {
 	return hashPasswordVersion1(password, cleanUserName(userName), modulus)
 }
 
-func hashPasswordVersion1(password, userName string, modulus []byte) (res []byte, err error) {
+func hashPasswordVersion1(password []byte, userName string, modulus []byte) (res []byte, err error) {
 	prehashed := md5.Sum([]byte(strings.ToLower(userName)))
 	encodedSalt := hex.EncodeToString(prehashed[:])
 	crypted, err := bcryptHash(password, encodedSalt)
@@ -134,10 +134,12 @@ func hashPasswordVersion1(password, userName string, modulus []byte) (res []byte
 		return
 	}
 
-	return expandHash(append([]byte(crypted), modulus...)), nil
+	return expandHash(append(crypted, modulus...)), nil
 }
 
-func hashPasswordVersion0(password, userName string, modulus []byte) (res []byte, err error) {
-	prehashed := sha512.Sum512([]byte(password))
-	return hashPasswordVersion1(base64.StdEncoding.EncodeToString(prehashed[:]), userName, modulus)
+func hashPasswordVersion0(password []byte, userName string, modulus []byte) (res []byte, err error) {
+	var b64Hash []byte
+	prehashed := sha512.Sum512(password)
+	base64.StdEncoding.Encode(b64Hash, prehashed[:])
+	return hashPasswordVersion1(b64Hash, userName, modulus)
 }

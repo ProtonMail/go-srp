@@ -50,9 +50,11 @@ func GetModulusKey() string {
 ///					salt: password salt
 ///					signedModuls, serverEphemeral from authinfo call
 //export GenerateProofs
-func GenerateProofs(version int32, username, password, salt, signedModulus, serverEphemeral string, bits int32) []byte {
+func GenerateProofs(version int32, username string, password []byte, salt, signedModulus, serverEphemeral string, bits int32) []byte {
 	v := int(version)
 	auth, err := srp.NewAuth(v, username, password, salt, signedModulus, serverEphemeral)
+	clear(password)
+
 	buf := bytes.Buffer{}
 	if err != nil {
 		//version
@@ -100,8 +102,10 @@ func GenerateProofs(version int32, username, password, salt, signedModulus, serv
 
 /// GenerateVerifier return back the raw bytes verifier.
 //export GenerateVerifier
-func GenerateVerifier(password, signedModulus string, rawSalt []byte, bits int32) []byte {
+func GenerateVerifier(password []byte, signedModulus string, rawSalt []byte, bits int32) []byte {
 	auth, err := srp.NewAuthForVerifier(password, signedModulus, rawSalt)
+	clear(password)
+
 	b := bytes.Buffer{}
 	if err != nil {
 		//version
@@ -137,6 +141,12 @@ func GenerateVerifier(password, signedModulus string, rawSalt []byte, bits int32
 	binary.Write(&b, binary.LittleEndian, verifierLen)
 	b.Write(verifier)
 	return b.Bytes()
+}
+
+func clear(w []byte) {
+	for k := range w {
+		w[k] = 0x00
+	}
 }
 
 func main() {}

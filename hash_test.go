@@ -47,12 +47,12 @@ func Test_bcryptHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run("testBcryp", func(t *testing.T) {
-			gotHashed, err := bcryptHash("test!!!", tt.encodedSalt)
+			gotHashed, err := bcryptHash([]byte("test!!!"), tt.encodedSalt)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("bcryptHash() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if gotHashed != tt.wantHashed {
+			if string(gotHashed) != tt.wantHashed {
 				t.Errorf("bcryptHash() = %v, want %v", gotHashed, tt.wantHashed)
 			}
 		})
@@ -74,12 +74,12 @@ func TestMailboxPassword(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotHashed, err := MailboxPassword(tt.args.password, tt.args.salt)
+			gotHashed, err := MailboxPassword([]byte(tt.args.password), tt.args.salt)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MailboxPassword() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if gotHashed != tt.wantHashed {
+			if string(gotHashed) != tt.wantHashed {
 				t.Errorf("MailboxPassword() = %v, want %v", gotHashed, tt.wantHashed)
 			}
 		})
@@ -104,7 +104,7 @@ func TestHashPassword(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := HashPassword(tt.args.authVersion, tt.args.password, tt.args.userName, tt.args.salt, tt.args.modulus)
+			got, err := HashPassword(tt.args.authVersion, []byte(tt.args.password), tt.args.userName, tt.args.salt, tt.args.modulus)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("HashPassword() error = %v, wantErr %v", err, tt.wantErr)
 				return
