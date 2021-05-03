@@ -30,7 +30,7 @@ import (
 	"math/rand"
 	"testing"
 
-	pmrand "github.com/ProtonMail/go-crypto/rand"
+	pmrand "crypto/rand"
 )
 
 const (

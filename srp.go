@@ -28,9 +28,10 @@ import (
 	"errors"
 	"math/big"
 
+	"crypto/rand"
+
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
-	"github.com/ProtonMail/go-crypto/rand"
 )
 
 var (
@@ -283,10 +284,10 @@ func (s *Auth) GenerateProofs(bitLength int) (res *Proofs, err error) {
 	serverProof := expandHash(bytes.Join([][]byte{fromInt(bitLength, clientEphemeral), clientProof, fromInt(bitLength, sharedSession)}, []byte{}))
 
 	return &Proofs{
-		ClientEphemeral: fromInt(bitLength, clientEphemeral),
-		ClientProof: clientProof,
+		ClientEphemeral:     fromInt(bitLength, clientEphemeral),
+		ClientProof:         clientProof,
 		ExpectedServerProof: serverProof,
-		sharedSession: fromInt(bitLength, sharedSession),
+		sharedSession:       fromInt(bitLength, sharedSession),
 	}, nil
 }
 
