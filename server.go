@@ -7,14 +7,13 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ProtonMail/go-crypto/rand"
+	"crypto/rand"
 )
-
 
 // Server stores the internal state for the validation of SRP proofs.
 type Server struct {
 	generator, modulus, verifier, serverSecret, serverEphemeral, sharedSession *big.Int
-	bitLength int
+	bitLength                                                                  int
 }
 
 // NewServer creates a new server instance from the raw binary data.
@@ -38,13 +37,13 @@ func NewServer(modulusBytes, verifier []byte, bitLength int) (*Server, error) {
 	}
 
 	return &Server{
-		generator: big.NewInt(2),
-		modulus: modulus,
-		serverSecret: secret,
-		verifier: toInt(verifier),
-		bitLength: bitLength,
+		generator:       big.NewInt(2),
+		modulus:         modulus,
+		serverSecret:    secret,
+		verifier:        toInt(verifier),
+		bitLength:       bitLength,
 		serverEphemeral: nil,
-		sharedSession: nil,
+		sharedSession:   nil,
 	}, nil
 }
 
@@ -63,7 +62,7 @@ func NewServerFromSigned(signedModulus string, verifier []byte, bitLength int) (
 }
 
 // GenerateChallenge is the first step for SRP exchange, and generates a valid challenge for the provided verifier.
-func (s *Server) GenerateChallenge() (serverEphemeral []byte, err error){
+func (s *Server) GenerateChallenge() (serverEphemeral []byte, err error) {
 	multiplier, err := computeMultiplier(s.generator, s.modulus, s.bitLength)
 	if err != nil {
 		return nil, err
@@ -133,7 +132,7 @@ func (s *Server) IsCompleted() bool {
 }
 
 // GetSharedSession returns the shared secret as byte if the session has concluded in valid state.
-func (s *Server) GetSharedSession() ([]byte, error){
+func (s *Server) GetSharedSession() ([]byte, error) {
 	if !s.IsCompleted() {
 		return nil, errors.New("pm-srp: SRP is not completed")
 	}

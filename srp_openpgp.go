@@ -30,9 +30,9 @@ import (
 	"errors"
 	"math/big"
 
+	"crypto/rand"
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
-	"github.com/ProtonMail/go-crypto/rand"
 )
 
 var (
