@@ -48,12 +48,17 @@ func NewServer(modulusBytes, verifier []byte, bitLength int) (*Server, error) {
 }
 
 // NewServerWithSecret creates a new server instance without generating a random secret from the raw binary data.
-// Use with caution as the secret is not verified.
+// Use with caution as the secret should not be reused.
 func NewServerWithSecret(modulusBytes, verifier, secretBytes []byte, bitLength int) (*Server, error) {
+	secret := toInt(secretBytes)
+	if secret.Cmp(big.NewInt(int64(bitLength*2))) <= 0 {
+		return nil, errors.New("go-srp: invalid secret")
+	}
+
 	return &Server{
 		generator: big.NewInt(2),
 		modulus: toInt(modulusBytes),
-		serverSecret: toInt(secretBytes),
+		serverSecret: secret,
 		verifier: toInt(verifier),
 		bitLength: bitLength,
 		serverEphemeral: nil,
