@@ -1,7 +1,11 @@
 # Changelog for SRP
 
+## 2021-05-04
+### Added
+* Add `NewServerWithSecret` function to create a custom server instance.
+
 ## 2021-05-03
-## Changed 
+### Changed 
 * Updated ProtonMail/go-crypto to the latest version and reverted to use standard library packages in some cases.
 
 ## 2021-04-21
