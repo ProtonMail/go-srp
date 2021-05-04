@@ -47,6 +47,20 @@ func NewServer(modulusBytes, verifier []byte, bitLength int) (*Server, error) {
 	}, nil
 }
 
+// NewServerWithSecret creates a new server instance without generating a random secret from the raw binary data.
+// Use with caution as the secret is not verified.
+func NewServerWithSecret(modulusBytes, verifier, secretBytes []byte, bitLength int) (*Server, error) {
+	return &Server{
+		generator: big.NewInt(2),
+		modulus: toInt(modulusBytes),
+		serverSecret: toInt(secretBytes),
+		verifier: toInt(verifier),
+		bitLength: bitLength,
+		serverEphemeral: nil,
+		sharedSession: nil,
+	}, nil
+}
+
 // NewServerFromSigned creates a new server instance from the signed modulus and the binary verifier.
 func NewServerFromSigned(signedModulus string, verifier []byte, bitLength int) (*Server, error) {
 	modulus, err := readClearSignedMessage(signedModulus)
