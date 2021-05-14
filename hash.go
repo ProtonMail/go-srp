@@ -138,8 +138,16 @@ func hashPasswordVersion1(password []byte, userName string, modulus []byte) (res
 }
 
 func hashPasswordVersion0(password []byte, userName string, modulus []byte) (res []byte, err error) {
-	var b64Hash []byte
+	b64Hash := make([]byte, 88) // 64 bytes in base64
 	prehashed := sha512.Sum512(password)
+	defer clear(prehashed[:])
 	base64.StdEncoding.Encode(b64Hash, prehashed[:])
+	defer clear(b64Hash)
 	return hashPasswordVersion1(b64Hash, userName, modulus)
+}
+
+func clear(w []byte) {
+	for k := range w {
+		w[k] = 0x00
+	}
 }
