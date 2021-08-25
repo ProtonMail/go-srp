@@ -72,3 +72,5 @@ glide i
 [golang.org/x/mobile](https://golang.org/x/mobile)
 
 [ProtonMail Crypto](https://github.com/ProtonMail/crypto)
+
+[Safenum](https://github.com/cronokirby/safenum)
