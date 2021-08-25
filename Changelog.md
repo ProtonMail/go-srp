@@ -1,5 +1,13 @@
 # Changelog for SRP
 
+## Unreleased
+
+### Changed
+* Use `github.com/cronokirby/safenum.Nat` instead of `math/big.Int` for sensitive operations, to avoid side channel attacks.
+
+### Removed 
+* Deleted `srp_openpgp.go` and `srp_openpgp_test.go` as it was redundant and unused. 
+
 ## 2021-05-04
 ### Added
 * Add `NewServerWithSecret` function to create a custom server instance.
