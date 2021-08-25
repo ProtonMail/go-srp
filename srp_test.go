@@ -24,13 +24,11 @@ package srp
 
 import (
 	"bytes"
+	pmrand "crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
-	"fmt"
 	"math/rand"
 	"testing"
-
-	pmrand "crypto/rand"
 )
 
 const (
@@ -162,8 +160,8 @@ func TestNewAuth(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotAuth, err := NewAuth(tt.args.version, tt.args.username, []byte(tt.args.password), tt.args.salt, tt.args.signedModulus, tt.args.serverEphemeral)
 			if gotAuth != nil {
-				fmt.Println(gotAuth.HashedPassword)
-				fmt.Println(gotAuth.Modulus)
+				// fmt.Println(gotAuth.HashedPassword)
+				// fmt.Println(gotAuth.Modulus)
 				//t.Errorf("gotAuth() error = %v", gotAuth)
 			}
 
@@ -253,5 +251,39 @@ func TestE2EFlow(t *testing.T) {
 			hex.EncodeToString(proofs.sharedSession),
 			hex.EncodeToString(sharedSession),
 		)
+	}
+}
+
+func BenchmarkGenerateProofs(b *testing.B) {
+	RandReader = pmrand.Reader
+	srp, err := NewAuth(4, "jakubqa", []byte("abc123"), "yKlc5/CvObfoiw==", testModulusClearSign, testServerEphemeral)
+	if err != nil {
+		b.Fatal("Expected no error but have ", err)
+	}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err = srp.GenerateProofs(2048)
+		if err != nil {
+			b.Fatal("Expected no error but have ", err)
+		}
+	}
+}
+
+func BenchmarkGenerateVerifier(b *testing.B) {
+	RandReader = pmrand.Reader
+	salt, err := base64.StdEncoding.DecodeString("yKlc5/CvObfoiw==")
+	if err != nil {
+		b.Fatal("Expected no error but have ", err)
+	}
+	srp, err := NewAuthForVerifier([]byte("abc123"), testModulusClearSign, salt)
+	if err != nil {
+		b.Fatal("Expected no error but have ", err)
+	}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err = srp.GenerateVerifier(2048)
+		if err != nil {
+			b.Fatal("Expected no error but have ", err)
+		}
 	}
 }

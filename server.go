@@ -4,65 +4,84 @@ import (
 	"bytes"
 	"crypto/subtle"
 	"encoding/base64"
-	"errors"
 	"math/big"
 
+	"github.com/pkg/errors"
+
 	"crypto/rand"
+
+	"github.com/cronokirby/safenum"
 )
 
 // Server stores the internal state for the validation of SRP proofs.
 type Server struct {
-	generator, modulus, verifier, serverSecret, serverEphemeral, sharedSession *big.Int
-	bitLength                                                                  int
+	generator, verifier, serverSecret, serverEphemeral, multiplier, modulus *safenum.Nat
+	sharedSession                                                           []byte
+	bitLength                                                               int
 }
 
 // NewServer creates a new server instance from the raw binary data.
 func NewServer(modulusBytes, verifier []byte, bitLength int) (*Server, error) {
-	var secret *big.Int
+	modulusInt := toInt(modulusBytes)
+	modulusMinusOneInt := big.NewInt(0).Sub(modulusInt, big.NewInt(1))
+	modulusMinusOneNat := new(safenum.Nat).SetBig(modulusMinusOneInt, bitLength)
 	var err error
-
-	modulus := toInt(modulusBytes)
-	modulusMinusOne := big.NewInt(0).Sub(modulus, big.NewInt(1))
-
+	var secret *safenum.Nat
+	var secretInt *big.Int
+	var secretBytes []byte
+	lowerBoundNat := newNat(uint64(bitLength * 2))
 	for {
-		secret, err = rand.Int(RandReader, modulusMinusOne)
+		secretInt, err = rand.Int(RandReader, modulusMinusOneInt)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Couldn't generate the secret")
 		}
+		secretBytes = fromInt(bitLength, secretInt)
+		secret = toNat(secretBytes)
 
-		// Prevent g^b from being smaller than the modulus
-		if secret.Cmp(big.NewInt(int64(bitLength*2))) > 0 {
+		// Prevent g^a from being smaller than the modulus
+		// and a to be >= than N-1
+		notTooSmall, _, _ := secret.Cmp(lowerBoundNat)
+		_, _, notTooLarge := secret.Cmp(modulusMinusOneNat)
+		if notTooSmall == 1 && notTooLarge == 1 {
 			break
 		}
 	}
-
+	multiplier, err := computeMultiplier(big.NewInt(2), toInt(modulusBytes), bitLength)
+	if err != nil {
+		return nil, err
+	}
 	return &Server{
-		generator:       big.NewInt(2),
-		modulus:         modulus,
+		generator:       newNat(2),
+		modulus:         toNat(modulusBytes),
 		serverSecret:    secret,
-		verifier:        toInt(verifier),
+		verifier:        toNat(verifier),
 		bitLength:       bitLength,
 		serverEphemeral: nil,
 		sharedSession:   nil,
+		multiplier:      multiplier,
 	}, nil
 }
 
 // NewServerWithSecret creates a new server instance without generating a random secret from the raw binary data.
 // Use with caution as the secret should not be reused.
 func NewServerWithSecret(modulusBytes, verifier, secretBytes []byte, bitLength int) (*Server, error) {
-	secret := toInt(secretBytes)
-	if secret.Cmp(big.NewInt(int64(bitLength*2))) <= 0 {
+	secret := toNat(secretBytes)
+	if greaterThan, _, _ := secret.Cmp(newNat(uint64(bitLength * 2))); greaterThan != 1 {
 		return nil, errors.New("go-srp: invalid secret")
 	}
-
+	multiplier, err := computeMultiplier(big.NewInt(2), toInt(modulusBytes), bitLength)
+	if err != nil {
+		return nil, err
+	}
 	return &Server{
-		generator: big.NewInt(2),
-		modulus: toInt(modulusBytes),
-		serverSecret: secret,
-		verifier: toInt(verifier),
-		bitLength: bitLength,
+		generator:       newNat(2),
+		modulus:         toNat(modulusBytes),
+		serverSecret:    secret,
+		verifier:        toNat(verifier),
+		bitLength:       bitLength,
 		serverEphemeral: nil,
-		sharedSession: nil,
+		sharedSession:   nil,
+		multiplier:      multiplier,
 	}, nil
 }
 
@@ -82,17 +101,46 @@ func NewServerFromSigned(signedModulus string, verifier []byte, bitLength int) (
 
 // GenerateChallenge is the first step for SRP exchange, and generates a valid challenge for the provided verifier.
 func (s *Server) GenerateChallenge() (serverEphemeral []byte, err error) {
-	multiplier, err := computeMultiplier(s.generator, s.modulus, s.bitLength)
-	if err != nil {
-		return nil, err
-	}
+	mod := safenum.ModulusFromNat(s.modulus)
+	s.serverEphemeral = new(safenum.Nat).ModAdd(
+		new(safenum.Nat).ModMul(s.multiplier, s.verifier, mod),
+		new(safenum.Nat).Exp(s.generator, s.serverSecret, mod),
+		mod,
+	)
 
-	s.serverEphemeral = big.NewInt(0).Mod(big.NewInt(0).Add(
-		big.NewInt(0).Mul(multiplier, s.verifier),
-		big.NewInt(0).Exp(s.generator, s.serverSecret, s.modulus),
-	), s.modulus)
+	return fromNat(s.bitLength, s.serverEphemeral), nil
+}
 
-	return fromInt(s.bitLength, s.serverEphemeral), nil
+func computeBaseServerSide(clientEphemeral, verifier, scramblingParam *safenum.Nat, modulus *safenum.Modulus) *safenum.Nat {
+	var receiver safenum.Nat
+	return receiver.ModMul(
+		clientEphemeral,
+		receiver.Exp(
+			verifier,
+			scramblingParam,
+			modulus,
+		),
+		modulus,
+	)
+}
+
+func computeSharedSecretServerSide(
+	bitLength int,
+	clientEphemeral, verifier, scramblingParam, serverSecret *safenum.Nat,
+	modulus *safenum.Modulus,
+) []byte {
+	base := computeBaseServerSide(
+		clientEphemeral,
+		verifier,
+		scramblingParam,
+		modulus,
+	)
+	sharedSession := new(safenum.Nat).Exp(
+		base,
+		serverSecret,
+		modulus,
+	)
+	return fromNat(bitLength, sharedSession)
 }
 
 // VerifyProofs Verifies the client proof and - if valid - generates the shared secret and returnd the server proof.
@@ -102,35 +150,33 @@ func (s *Server) VerifyProofs(clientEphemeralBytes, clientProofBytes []byte) (se
 		return nil, errors.New("pm-srp: SRP server ephemeral is not generated")
 	}
 
-	modulusMinusOne := big.NewInt(0).Sub(s.modulus, big.NewInt(1))
-	clientEphemeral := toInt(clientEphemeralBytes)
-
-	if clientEphemeral.Cmp(big.NewInt(1)) <= 0 || clientEphemeral.Cmp(modulusMinusOne) >= 0 {
+	modulusMinusOne := new(safenum.Nat).Sub(s.modulus, newNat(1), s.bitLength)
+	clientEphemeral := toNat(clientEphemeralBytes)
+	greaterThanOne, _, _ := clientEphemeral.Cmp(newNat(1))
+	_, _, lessThanModulusMinusOne := clientEphemeral.Cmp(modulusMinusOne)
+	if greaterThanOne != 1 || lessThanModulusMinusOne != 1 {
 		return nil, errors.New("pm-srp: SRP client ephemeral is out of bounds")
 	}
 
-	scramblingParam := toInt(expandHash(append(clientEphemeralBytes, fromInt(s.bitLength, s.serverEphemeral)...)))
-	if scramblingParam.Cmp(big.NewInt(0)) == 0 {
+	scramblingParam := computeScrambleParam(clientEphemeralBytes, fromNat(s.bitLength, s.serverEphemeral))
+	if _, isZero, _ := scramblingParam.Cmp(newNat(0)); isZero == 1 {
 		return nil, errors.New("pm-srp: SRP client ephemeral is invalid")
 	}
 
-	s.sharedSession = big.NewInt(0).Exp(
-		big.NewInt(0).Mul(
-			clientEphemeral,
-			big.NewInt(0).Exp(
-				s.verifier,
-				scramblingParam,
-				s.modulus,
-			),
-		),
+	modulus := safenum.ModulusFromNat(s.modulus)
+	s.sharedSession = computeSharedSecretServerSide(
+		s.bitLength,
+		clientEphemeral,
+		s.verifier,
+		scramblingParam,
 		s.serverSecret,
-		s.modulus,
+		modulus,
 	)
 
 	expectedClientProof := expandHash(bytes.Join([][]byte{
 		clientEphemeralBytes,
-		fromInt(s.bitLength, s.serverEphemeral),
-		fromInt(s.bitLength, s.sharedSession),
+		fromNat(s.bitLength, s.serverEphemeral),
+		s.sharedSession,
 	}, []byte{}))
 
 	if subtle.ConstantTimeCompare(expectedClientProof, clientProofBytes) == 0 {
@@ -141,7 +187,7 @@ func (s *Server) VerifyProofs(clientEphemeralBytes, clientProofBytes []byte) (se
 	return expandHash(bytes.Join([][]byte{
 		clientEphemeralBytes,
 		clientProofBytes,
-		fromInt(s.bitLength, s.sharedSession),
+		s.sharedSession,
 	}, []byte{})), nil
 }
 
@@ -155,6 +201,5 @@ func (s *Server) GetSharedSession() ([]byte, error) {
 	if !s.IsCompleted() {
 		return nil, errors.New("pm-srp: SRP is not completed")
 	}
-
-	return fromInt(s.bitLength, s.sharedSession), nil
+	return s.sharedSession, nil
 }
