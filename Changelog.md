@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+* New function `ECDLPChallenge` to solve Elliptic Curve Discrete Logaritm Problem challenges.
+
 ### Changed
 * Use `github.com/cronokirby/safenum.Nat` instead of `math/big.Int` for sensitive operations, to avoid side channel attacks.
 
