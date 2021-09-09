@@ -10,12 +10,12 @@ import (
 
 	"crypto/rand"
 
-	"github.com/cronokirby/safenum"
+	"github.com/cronokirby/saferith"
 )
 
 // Server stores the internal state for the validation of SRP proofs.
 type Server struct {
-	generator, verifier, serverSecret, serverEphemeral, multiplier, modulus *safenum.Nat
+	generator, verifier, serverSecret, serverEphemeral, multiplier, modulus *saferith.Nat
 	sharedSession                                                           []byte
 	bitLength                                                               int
 }
@@ -24,9 +24,9 @@ type Server struct {
 func NewServer(modulusBytes, verifier []byte, bitLength int) (*Server, error) {
 	modulusInt := toInt(modulusBytes)
 	modulusMinusOneInt := big.NewInt(0).Sub(modulusInt, big.NewInt(1))
-	modulusMinusOneNat := new(safenum.Nat).SetBig(modulusMinusOneInt, bitLength)
+	modulusMinusOneNat := new(saferith.Nat).SetBig(modulusMinusOneInt, bitLength)
 	var err error
-	var secret *safenum.Nat
+	var secret *saferith.Nat
 	var secretInt *big.Int
 	var secretBytes []byte
 	lowerBoundNat := newNat(uint64(bitLength * 2))
@@ -101,18 +101,18 @@ func NewServerFromSigned(signedModulus string, verifier []byte, bitLength int) (
 
 // GenerateChallenge is the first step for SRP exchange, and generates a valid challenge for the provided verifier.
 func (s *Server) GenerateChallenge() (serverEphemeral []byte, err error) {
-	mod := safenum.ModulusFromNat(s.modulus)
-	s.serverEphemeral = new(safenum.Nat).ModAdd(
-		new(safenum.Nat).ModMul(s.multiplier, s.verifier, mod),
-		new(safenum.Nat).Exp(s.generator, s.serverSecret, mod),
+	mod := saferith.ModulusFromNat(s.modulus)
+	s.serverEphemeral = new(saferith.Nat).ModAdd(
+		new(saferith.Nat).ModMul(s.multiplier, s.verifier, mod),
+		new(saferith.Nat).Exp(s.generator, s.serverSecret, mod),
 		mod,
 	)
 
 	return fromNat(s.bitLength, s.serverEphemeral), nil
 }
 
-func computeBaseServerSide(clientEphemeral, verifier, scramblingParam *safenum.Nat, modulus *safenum.Modulus) *safenum.Nat {
-	var receiver safenum.Nat
+func computeBaseServerSide(clientEphemeral, verifier, scramblingParam *saferith.Nat, modulus *saferith.Modulus) *saferith.Nat {
+	var receiver saferith.Nat
 	return receiver.ModMul(
 		clientEphemeral,
 		receiver.Exp(
@@ -126,8 +126,8 @@ func computeBaseServerSide(clientEphemeral, verifier, scramblingParam *safenum.N
 
 func computeSharedSecretServerSide(
 	bitLength int,
-	clientEphemeral, verifier, scramblingParam, serverSecret *safenum.Nat,
-	modulus *safenum.Modulus,
+	clientEphemeral, verifier, scramblingParam, serverSecret *saferith.Nat,
+	modulus *saferith.Modulus,
 ) []byte {
 	base := computeBaseServerSide(
 		clientEphemeral,
@@ -135,7 +135,7 @@ func computeSharedSecretServerSide(
 		scramblingParam,
 		modulus,
 	)
-	sharedSession := new(safenum.Nat).Exp(
+	sharedSession := new(saferith.Nat).Exp(
 		base,
 		serverSecret,
 		modulus,
@@ -150,7 +150,7 @@ func (s *Server) VerifyProofs(clientEphemeralBytes, clientProofBytes []byte) (se
 		return nil, errors.New("pm-srp: SRP server ephemeral is not generated")
 	}
 
-	modulusMinusOne := new(safenum.Nat).Sub(s.modulus, newNat(1), s.bitLength)
+	modulusMinusOne := new(saferith.Nat).Sub(s.modulus, newNat(1), s.bitLength)
 	clientEphemeral := toNat(clientEphemeralBytes)
 	greaterThanOne, _, _ := clientEphemeral.Cmp(newNat(1))
 	_, _, lessThanModulusMinusOne := clientEphemeral.Cmp(modulusMinusOne)
@@ -163,7 +163,7 @@ func (s *Server) VerifyProofs(clientEphemeralBytes, clientProofBytes []byte) (se
 		return nil, errors.New("pm-srp: SRP client ephemeral is invalid")
 	}
 
-	modulus := safenum.ModulusFromNat(s.modulus)
+	modulus := saferith.ModulusFromNat(s.modulus)
 	s.sharedSession = computeSharedSecretServerSide(
 		s.bitLength,
 		clientEphemeral,

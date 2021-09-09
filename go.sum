@@ -2,8 +2,8 @@ github.com/ProtonMail/bcrypt v0.0.0-20210511135022-227b4adcab57 h1:pHA4K54ifoogV
 github.com/ProtonMail/bcrypt v0.0.0-20210511135022-227b4adcab57/go.mod h1:HecWFHognK8GfRDGnFQbW/LiV7A3MX3gZVs45vk5h8I=
 github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 h1:YoJbenK9C67SkzkDfmQuVln04ygHj3vjZfd9FL+GmQQ=
 github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7/go.mod h1:z4/9nQmJSSwwds7ejkxaJwO37dru3geImFUdJlaLzQo=
-github.com/cronokirby/safenum v0.29.0 h1:kf1/8vvN/yQjrZU3tR/vDb5OdIQp2uJ6WvPVbU61J+E=
-github.com/cronokirby/safenum v0.29.0/go.mod h1:AWp82xwEqKcnrpJPXPa1m0gF/OY8dzgL17ubUBnVygA=
+github.com/cronokirby/saferith v0.31.0 h1:TIlhldetKLeGAb19bZvWiuwQEzfzwSPthDEyJ9Ah8xs=
+github.com/cronokirby/saferith v0.31.0/go.mod h1:QKJhjoqUtBsXCAVEjw38mFqoi7DebT7kthcD7UzbnoA=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 h1:It14KIkyBFYkHkwZ7k45minvA9aorojkyjGk9KJ5B/w=

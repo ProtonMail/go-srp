@@ -73,4 +73,4 @@ glide i
 
 [ProtonMail Crypto](https://github.com/ProtonMail/crypto)
 
-[Safenum](https://github.com/cronokirby/safenum)
+[Saferith](https://github.com/cronokirby/saferith)

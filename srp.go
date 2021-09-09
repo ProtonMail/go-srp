@@ -32,7 +32,7 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
-	"github.com/cronokirby/safenum"
+	"github.com/cronokirby/saferith"
 )
 
 var (
@@ -200,27 +200,27 @@ func fromInt(bitLength int, num *big.Int) []byte {
 	return reversed
 }
 
-func toNat(arr []byte) *safenum.Nat {
+func toNat(arr []byte) *saferith.Nat {
 	var reversed = make([]byte, len(arr))
 	for i := 0; i < len(arr); i++ {
 		reversed[len(arr)-i-1] = arr[i]
 	}
-	return new(safenum.Nat).SetBytes(reversed)
+	return new(saferith.Nat).SetBytes(reversed)
 }
 
-func newNat(val uint64) *safenum.Nat {
-	return new(safenum.Nat).SetUint64(val)
+func newNat(val uint64) *saferith.Nat {
+	return new(saferith.Nat).SetUint64(val)
 }
 
-func toModulus(arr []byte) *safenum.Modulus {
+func toModulus(arr []byte) *saferith.Modulus {
 	var reversed = make([]byte, len(arr))
 	for i := 0; i < len(arr); i++ {
 		reversed[len(arr)-i-1] = arr[i]
 	}
-	return safenum.ModulusFromBytes(reversed)
+	return saferith.ModulusFromBytes(reversed)
 }
 
-func fromNat(bitLength int, nat *safenum.Nat) []byte {
+func fromNat(bitLength int, nat *saferith.Nat) []byte {
 	var arr = nat.Bytes()
 	var reversed = make([]byte, bitLength/8)
 	for i := 0; i < len(arr); i++ {
@@ -229,7 +229,7 @@ func fromNat(bitLength int, nat *safenum.Nat) []byte {
 	return reversed
 }
 
-func computeMultiplier(generator, modulus *big.Int, bitLength int) (*safenum.Nat, error) {
+func computeMultiplier(generator, modulus *big.Int, bitLength int) (*saferith.Nat, error) {
 	modulusMinusOne := big.NewInt(0).Sub(modulus, big.NewInt(1))
 	multiplier := toInt(expandHash(append(fromInt(bitLength, generator), fromInt(bitLength, modulus)...)))
 	multiplier = multiplier.Mod(multiplier, modulus)
@@ -238,7 +238,7 @@ func computeMultiplier(generator, modulus *big.Int, bitLength int) (*safenum.Nat
 		return nil, errors.New("pm-srp: SRP multiplier is out of bounds")
 	}
 
-	return new(safenum.Nat).SetBig(multiplier, bitLength), nil
+	return new(saferith.Nat).SetBig(multiplier, bitLength), nil
 }
 
 func checkParams(bitLength int, ephemeral, generator, modulus *big.Int, modulusMinusOne *big.Int) error {
@@ -273,9 +273,9 @@ func checkParams(bitLength int, ephemeral, generator, modulus *big.Int, modulusM
 func generateClientEphemeral(
 	bitLength int,
 	modulusInt, modulusMinusOneInt *big.Int,
-	modulusMinusOneNat *safenum.Nat,
-	modulus *safenum.Modulus,
-) (secret *safenum.Nat, ephemeral []byte, err error) {
+	modulusMinusOneNat *saferith.Nat,
+	modulus *saferith.Modulus,
+) (secret *saferith.Nat, ephemeral []byte, err error) {
 	var secretInt *big.Int
 	var secretBytes []byte
 	lowerBoundNat := newNat(uint64(bitLength * 2))
@@ -295,12 +295,12 @@ func generateClientEphemeral(
 			break
 		}
 	}
-	ephemeralNat := new(safenum.Nat).Exp(newNat(2), secret, modulus)
+	ephemeralNat := new(saferith.Nat).Exp(newNat(2), secret, modulus)
 	ephemeral = fromNat(bitLength, ephemeralNat)
 	return secret, ephemeral, nil
 }
 
-func computeScrambleParam(clientEphemeralBytes, serverEphemeralBytes []byte) *safenum.Nat {
+func computeScrambleParam(clientEphemeralBytes, serverEphemeralBytes []byte) *saferith.Nat {
 	return toNat(
 		expandHash(
 			append(
@@ -311,8 +311,8 @@ func computeScrambleParam(clientEphemeralBytes, serverEphemeralBytes []byte) *sa
 	)
 }
 
-func computeBaseClientSide(hashedPassword, generator, serverEphemeral, multiplier *safenum.Nat, modulus *safenum.Modulus) *safenum.Nat {
-	var receiver safenum.Nat
+func computeBaseClientSide(hashedPassword, generator, serverEphemeral, multiplier *saferith.Nat, modulus *saferith.Modulus) *saferith.Nat {
+	var receiver saferith.Nat
 	return receiver.ModSub(
 		serverEphemeral,
 		receiver.ModMul(
@@ -328,8 +328,8 @@ func computeBaseClientSide(hashedPassword, generator, serverEphemeral, multiplie
 	)
 }
 
-func computeExponentClientSide(bitLength int, scramblingParam, hashedPassword, clientSecret *safenum.Nat, modulusMinusOne *safenum.Modulus) *safenum.Nat {
-	var receiver safenum.Nat
+func computeExponentClientSide(bitLength int, scramblingParam, hashedPassword, clientSecret *saferith.Nat, modulusMinusOne *saferith.Modulus) *saferith.Nat {
+	var receiver saferith.Nat
 	return receiver.ModAdd(
 		receiver.ModMul(
 			scramblingParam,
@@ -343,8 +343,8 @@ func computeExponentClientSide(bitLength int, scramblingParam, hashedPassword, c
 
 func computeSharedSecretClientSide(
 	bitLength int,
-	hashedPassword, generator, serverEphemeral, multiplier, modulusMinusOneNat, clientSecret, scramblingParam *safenum.Nat,
-	modulus *safenum.Modulus,
+	hashedPassword, generator, serverEphemeral, multiplier, modulusMinusOneNat, clientSecret, scramblingParam *saferith.Nat,
+	modulus *saferith.Modulus,
 ) []byte {
 	base := computeBaseClientSide(
 		hashedPassword,
@@ -353,7 +353,7 @@ func computeSharedSecretClientSide(
 		multiplier,
 		modulus,
 	)
-	modulusMinusOne := safenum.ModulusFromNat(modulusMinusOneNat)
+	modulusMinusOne := saferith.ModulusFromNat(modulusMinusOneNat)
 	exponent := computeExponentClientSide(
 		bitLength,
 		scramblingParam,
@@ -361,7 +361,7 @@ func computeSharedSecretClientSide(
 		clientSecret,
 		modulusMinusOne,
 	)
-	sharedSession := new(safenum.Nat).Exp(
+	sharedSession := new(saferith.Nat).Exp(
 		base,
 		exponent,
 		modulus,
@@ -412,8 +412,8 @@ func (s *Auth) GenerateProofs(bitLength int) (*Proofs, error) {
 	}
 
 	modulus := toModulus(s.Modulus)
-	modulusMinusOneNat := new(safenum.Nat).SetBig(modulusMinusOneInt, bitLength)
-	var clientSecret, scramblingParam *safenum.Nat
+	modulusMinusOneNat := new(saferith.Nat).SetBig(modulusMinusOneInt, bitLength)
+	var clientSecret, scramblingParam *saferith.Nat
 	var clientEphemeralBytes []byte
 	for {
 		clientSecret, clientEphemeralBytes, err = generateClientEphemeral(
@@ -470,7 +470,7 @@ func (s *Auth) GenerateVerifier(bitLength int) ([]byte, error) {
 	modulus := toModulus(s.Modulus)
 	generator := newNat(2)
 	hashedPassword := toNat(s.HashedPassword)
-	calModPow := new(safenum.Nat).SetUint64(0).Exp(generator, hashedPassword, modulus)
+	calModPow := new(saferith.Nat).SetUint64(0).Exp(generator, hashedPassword, modulus)
 	return fromNat(bitLength, calModPow), nil
 }
 

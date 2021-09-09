@@ -6,8 +6,8 @@
 * New function `ECDLPChallenge` to solve Elliptic Curve Discrete Logaritm Problem challenges.
 
 ### Changed
-* Use `github.com/cronokirby/safenum.Nat` instead of `math/big.Int` for sensitive operations, to avoid side channel attacks.
-
+* Use `github.com/cronokirby/saferith.Nat` instead of `math/big.Int` for sensitive operations, to avoid side channel attacks.
+* Updated `saferith` to `v0.31.0`
 ### Removed 
 * Deleted `srp_openpgp.go` and `srp_openpgp_test.go` as it was redundant and unused. 
 

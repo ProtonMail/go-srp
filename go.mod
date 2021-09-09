@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7
-	github.com/cronokirby/safenum v0.29.0
+	github.com/cronokirby/saferith v0.31.0
 	github.com/jameskeane/bcrypt v0.0.0-20120420032655-c3cd44c1e20f
 	github.com/pkg/errors v0.9.1
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
