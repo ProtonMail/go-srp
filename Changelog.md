@@ -1,6 +1,6 @@
 # Changelog for SRP
 
-## Unreleased
+## v0.0.1 (2021-09-29)
 
 ### Added
 * New function `ECDLPChallenge` to solve Elliptic Curve Discrete Logaritm Problem challenges.
