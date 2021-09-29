@@ -6,12 +6,13 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+
 	"golang.org/x/crypto/curve25519"
 )
 
 const ECDLPEphemeralSize = 24
 
-func ECDLPChallenge(b64Challenge string) (solution uint64, err error) {
+func ECDLPChallenge(b64Challenge string) (solution int64, err error) {
 	if len(b64Challenge) != 76 { // 56 bytes in base64
 		return 0, errors.New("srp:invalid ECDLP challenge length")
 	}
@@ -38,5 +39,6 @@ func ECDLPChallenge(b64Challenge string) (solution uint64, err error) {
 	}
 
 	// Last iteration increments i by 1 too much
-	return i - 1, nil
+	// We cast to int64 for gomobile, possible because the challenges don't go above 2^63
+	return int64(i - 1), nil
 }

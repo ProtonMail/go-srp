@@ -1,5 +1,11 @@
 # Changelog for SRP
 
+## Unrealeased
+
+### Changed
+* Changed the return type of `ECDLPChallenge` from uint64 to int64 to be supported
+by gomobile. 
+
 ## v0.0.1 (2021-09-29)
 
 ### Added
