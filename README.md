@@ -2,7 +2,7 @@
 
 ## Introduction
 
-srp libaray used in all Protonmail clients
+Golang implementation of the [SRP protocol](https://datatracker.ietf.org/doc/html/rfc5054), used for authentication of ProtonMail users.
 
 ## License
 
@@ -12,15 +12,19 @@ Please see [LICENSE](LICENSE.txt) file for the license.
 
 ## Doc 
 
-[Secure Remote Password (SRP) Protocol](https://protonmail.com/blog/encrypted_email_authentication/)
+- [Technical blog post](https://protonmail.com/blog/encrypted_email_authentication/)
+- [RFC 5054](https://datatracker.ietf.org/doc/html/rfc5054)
 
-## Folders
+## Replacement
 
-The `root` folder contains the main logic.
+Make sure you replace the go module `github.com/jameskeane/bcrypt`
+with its fork `github.com/ProtonMail/bcrypt`
 
-The `windows` folder contains the warpper for .net.
+## .NET Wrapper
 
-## Setup
+The `windows` folder contains the wrapper for .net.
+
+## Build for mobile apps
 
 Setup Go Mobile and build/bind the source code:
 
@@ -51,7 +55,7 @@ If you wish to use `build.sh`, you may need to modify the paths in it.
 #### use go mod
 
 ```go
-go mod vender
+go mod vendor
 ```
 
 ```bash
@@ -65,12 +69,12 @@ glide i
 ./build.sh
 ```
 
-### Dependencies
+## Dependencies
 
-[bcrypt](https://github.com/jameskeane/bcrypt)
+[github.com/ProtonMail/bcrypt (fork of github.com/jameskeane/bcrypt)](https://github.com/ProtonMail/bcrypt)
 
 [golang.org/x/mobile](https://golang.org/x/mobile)
 
-[ProtonMail Crypto](https://github.com/ProtonMail/crypto)
+[github.com/ProtonMail/go-crypto](https://github.com/ProtonMail/go-crypto)
 
-[Saferith](https://github.com/cronokirby/saferith)
+[github.com/cronokirby/saferith](https://github.com/cronokirby/saferith)
