@@ -2,6 +2,10 @@
 
 ## Unrealeased
 
+### Added
+* Add a `Version` property to `Auth` struct to let the client access the version number used
+for authentication.
+
 ### Changed
 * Changed the return type of `ECDLPChallenge` from uint64 to int64 to be supported
 by gomobile. 
