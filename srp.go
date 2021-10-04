@@ -60,6 +60,7 @@ type Proofs struct {
 //  * Also the data from the API called Auth. it could be match the meaning and reduce the confusion
 type Auth struct {
 	Modulus, ServerEphemeral, HashedPassword []byte
+	Version                                  int
 }
 
 // Amored pubkey for modulus verification
@@ -140,6 +141,9 @@ func NewAuth(version int, username string, password []byte, b64salt, signedModul
 		return
 	}
 
+	// Authentication version
+	data.Version = version
+
 	auth = data
 	return
 }
@@ -179,6 +183,8 @@ func NewAuthForVerifier(password []byte, signedModulus string, rawSalt []byte) (
 	if err != nil {
 		return
 	}
+	// Authentication version hardcoded
+	data.Version = 4
 	auth = data
 	return
 }
