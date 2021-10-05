@@ -15,11 +15,6 @@ Please see [LICENSE](LICENSE.txt) file for the license.
 - [Technical blog post](https://protonmail.com/blog/encrypted_email_authentication/)
 - [RFC 5054](https://datatracker.ietf.org/doc/html/rfc5054)
 
-## Replacement
-
-Make sure you replace the go module `github.com/jameskeane/bcrypt`
-with its fork `github.com/ProtonMail/bcrypt`
-
 ## .NET Wrapper
 
 The `windows` folder contains the wrapper for .net.

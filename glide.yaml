@@ -1,4 +1,4 @@
 package: srp
 import:
 - package: github.com/ProtonMail/go-crypto
-- package: github.com/jameskeane/bcrypt
+- package: github.com/ProtonMail/bcrypt

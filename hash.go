@@ -31,7 +31,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/jameskeane/bcrypt"
+	"github.com/ProtonMail/bcrypt"
 )
 
 //based64DotSlash Bcrypt uses an adapted base64 alphabet (using . instead of +, starting with ./ and with no padding).
