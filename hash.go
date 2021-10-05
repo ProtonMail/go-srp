@@ -48,12 +48,7 @@ var based64DotSlash = base64.NewEncoding("./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij
 // Usage:
 //
 func bcryptHash(password []byte, encodedSalt string) (hashed []byte, err error) {
-	realSalt := []byte("$2a$10$" + encodedSalt)
-	hashed, err = bcrypt.HashBytes(password, realSalt)
-	if len(hashed) > 4 {
-		hashed = append([]byte("$2y$"), hashed[4:]...)
-	}
-	return
+	return bcrypt.HashBytes(password, []byte("$2y$10$"+encodedSalt))
 }
 
 // expandHash extends the byte data for SRP flow
