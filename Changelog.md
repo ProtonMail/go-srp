@@ -15,7 +15,8 @@ by gomobile.
 ## Fixed
 * Use the `$2y$` version of `bcrypt` internally directly instead of using a workaround
 with `$2a$`.
-
+* Update the `github.com/cronokirby/saferith` arithmetic library to v0.32.0 to fix
+issues for devices with 32bits architectures.
 
 ## v0.0.1 (2021-09-29)
 
