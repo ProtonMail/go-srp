@@ -8,7 +8,11 @@ for authentication.
 
 ### Changed
 * Changed the return type of `ECDLPChallenge` from uint64 to int64 to be supported
-by gomobile. 
+by gomobile.
+
+## Fixed
+* Use the `$2y$` version of `bcrypt` internally directly instead of using a workaround
+with `$2a$`.
 
 ## v0.0.1 (2021-09-29)
 
