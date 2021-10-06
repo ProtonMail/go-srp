@@ -1,6 +1,6 @@
 # Changelog for SRP
 
-## Unrealeased
+## v0.0.2 (2021-10-05)
 
 ### Added
 * Add a `Version` property to `Auth` struct to let the client access the version number used
