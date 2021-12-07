@@ -134,7 +134,9 @@ func hashPasswordVersion1(password []byte, userName string, modulus []byte) (res
 
 func hashPasswordVersion0(password []byte, userName string, modulus []byte) (res []byte, err error) {
 	b64Hash := make([]byte, 88) // 64 bytes in base64
-	prehashed := sha512.Sum512(password)
+	userAndPass := append([]byte(strings.ToLower(userName)), password...)
+	defer clear(userAndPass)
+	prehashed := sha512.Sum512(userAndPass)
 	defer clear(prehashed[:])
 	base64.StdEncoding.Encode(b64Hash, prehashed[:])
 	defer clear(b64Hash)
