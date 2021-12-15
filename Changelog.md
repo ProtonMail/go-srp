@@ -1,5 +1,10 @@
 # Changelog for SRP
 
+## v0.0.3 (2021-12-15)
+
+## Fixed
+* Fix the hash generation for users with SRP legacy authentication version 0.
+
 ## v0.0.2 (2021-10-05)
 
 ### Added
