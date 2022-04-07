@@ -47,20 +47,11 @@ Go Mobile wiki: https://github.com/golang/go/wiki/Mobile
 
 If you wish to use `build.sh`, you may need to modify the paths in it.
 
-#### use go mod
-
 ```go
 go mod vendor
 ```
 
 ```bash
-./build.sh
-```
-
-#### use glide
-
-```bash
-glide i
 ./build.sh
 ```
 
