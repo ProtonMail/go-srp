@@ -2,6 +2,7 @@ package srp
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -14,7 +15,7 @@ import (
 
 const ecdlpPRFKeySize = 32
 
-func ECDLPChallenge(b64Challenge string) (b64Solution string, err error) {
+func ECDLPChallenge(b64Challenge string, ctx context.Context) (b64Solution string, err error) {
 	challenge, err := base64.StdEncoding.DecodeString(b64Challenge)
 	if err != nil {
 		return "", err
@@ -29,6 +30,12 @@ func ECDLPChallenge(b64Challenge string) (b64Solution string, err error) {
 	buffer := make([]byte, 8)
 
 	for i = 0;; i++ {
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		default:
+		}
+
 		prePRF := hmac.New(sha256.New, challenge[:ecdlpPRFKeySize])
 		binary.LittleEndian.PutUint64(buffer, i)
 		_, _ = prePRF.Write(buffer)
@@ -52,7 +59,7 @@ func ECDLPChallenge(b64Challenge string) (b64Solution string, err error) {
 
 const argon2PRFKeySize = 32
 
-func Argon2PreimageChallenge(b64Challenge string) (b64Solution string, err error) {
+func Argon2PreimageChallenge(b64Challenge string, ctx context.Context) (b64Solution string, err error) {
 	challenge, err := base64.StdEncoding.DecodeString(b64Challenge)
 	if err != nil {
 		return "", err
@@ -76,6 +83,12 @@ func Argon2PreimageChallenge(b64Challenge string) (b64Solution string, err error
 	buffer := make([]byte, 8)
 
 	for i = 0;; i++ {
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		default:
+		}
+
 		prePRF := hmac.New(sha256.New, prfKeys[:argon2PRFKeySize])
 		binary.LittleEndian.PutUint64(buffer, i)
 		_, _ = prePRF.Write(buffer)
