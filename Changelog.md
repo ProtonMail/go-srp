@@ -1,5 +1,10 @@
 # Changelog for SRP
 
+## Unreleased
+
+## Changed
+* Update `github.com/cronokirby/saferith` dependency to v0.33.0. Adds assembly routines support for more platforms
+
 ## v0.0.3 (2021-12-15)
 
 ## Fixed
