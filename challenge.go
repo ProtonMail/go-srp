@@ -2,20 +2,32 @@ package srp
 
 import (
 	"bytes"
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"math"
+	"time"
 
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/curve25519"
 )
 
+// Implementation following the "context" package
+var DeadlineExceeded error = deadlineExceededError{}
+
+type deadlineExceededError struct{}
+
+func (deadlineExceededError) Error() string   { return "srp: deadline exceeded calculating proof-of-work challenge" }
+func (deadlineExceededError) Timeout() bool   { return true }
+func (deadlineExceededError) Temporary() bool { return true }
+
 const ecdlpPRFKeySize = 32
 
-func ECDLPChallenge(b64Challenge string, ctx context.Context) (b64Solution string, err error) {
+// Deadlines are measured on the wall clock, not the monotonic clock, due
+// to unreliability on mobile devices
+func ECDLPChallenge(b64Challenge string, deadlineUnixMilli uint64) (b64Solution string, err error) {
 	challenge, err := base64.StdEncoding.DecodeString(b64Challenge)
 	if err != nil {
 		return "", err
@@ -30,10 +42,8 @@ func ECDLPChallenge(b64Challenge string, ctx context.Context) (b64Solution strin
 	buffer := make([]byte, 8)
 
 	for i = 0;; i++ {
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		default:
+		if deadlineUnixMilli <= math.MaxInt64 && time.Now().UnixMilli() > int64(deadlineUnixMilli) {
+			return "", DeadlineExceeded
 		}
 
 		prePRF := hmac.New(sha256.New, challenge[:ecdlpPRFKeySize])
@@ -59,7 +69,7 @@ func ECDLPChallenge(b64Challenge string, ctx context.Context) (b64Solution strin
 
 const argon2PRFKeySize = 32
 
-func Argon2PreimageChallenge(b64Challenge string, ctx context.Context) (b64Solution string, err error) {
+func Argon2PreimageChallenge(b64Challenge string, deadlineUnixMilli uint64) (b64Solution string, err error) {
 	challenge, err := base64.StdEncoding.DecodeString(b64Challenge)
 	if err != nil {
 		return "", err
@@ -83,10 +93,8 @@ func Argon2PreimageChallenge(b64Challenge string, ctx context.Context) (b64Solut
 	buffer := make([]byte, 8)
 
 	for i = 0;; i++ {
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		default:
+		if deadlineUnixMilli <= math.MaxInt64 && time.Now().UnixMilli() > int64(deadlineUnixMilli) {
+			return "", DeadlineExceeded
 		}
 
 		prePRF := hmac.New(sha256.New, prfKeys[:argon2PRFKeySize])

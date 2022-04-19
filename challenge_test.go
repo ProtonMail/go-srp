@@ -1,7 +1,7 @@
 package srp
 
 import (
-	"context"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -11,7 +11,7 @@ func TestECDLPChallenge(t *testing.T) {
 	b64Challenge := "qfGBXLcNQMRqs/Krzx+EL87++Unwy5PGlnWxK2/BRIckF+Zlqmo7eIczHzAfm66MIZk5hkRVDVXMmEfy7dB++pkn3Ht+4bm3UtbBws/R43xZn23E2rSvPACxnjGFxMar"
 	b64Target := "ewAAAAAAAACsasMixdYBr/9Fb4SMM8urvjPUEUCVOjGqzwQyRdUafg=="
 
-	result, err := ECDLPChallenge(b64Challenge, context.Background())
+	result, err := ECDLPChallenge(b64Challenge, math.MaxUint64)
 	if err != nil {
 		t.Fatal("Expected no error in processing challenge")
 	}
@@ -23,9 +23,8 @@ func TestECDLPChallenge(t *testing.T) {
 
 func TestECDLPChallengeTimeout(t *testing.T) {
 	b64Challenge := strings.Repeat("A", 128)
-	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
-	_, err := ECDLPChallenge(b64Challenge, ctx)
-	if err != context.DeadlineExceeded {
+	_, err := ECDLPChallenge(b64Challenge, uint64(time.Now().UnixMilli() + 5))
+	if err != DeadlineExceeded {
 		t.Fatal("Expected timeout in ECDLP challenge")
 	}
 }
@@ -34,7 +33,7 @@ func TestArgon2PreimageChallenge(t *testing.T) {
 	b64Challenge := "qbYJSn07JQGfol0u8MJTZ16fDRyFo2AR6phcgqlZCr44RBpz/odJc17EROMfMOpz2dE8oHW2JHeqoRax2ha4bpGusDBkEySSWJU+cmuWePzUC58fTY+VJMLBMDLhdqV9QKvozeqKcoPzqDoHZZYmyWQf4DIAKfgaha/WwzMikQMBAAAAIAAAAOEQAAABAAAA"
 	b64Target := "ewAAAAAAAABXe+n/4g0Hfz40eEw7h5d3XeiKdWilfCJvz0izj7p0YA=="
 
-	result, err := Argon2PreimageChallenge(b64Challenge, context.Background())
+	result, err := Argon2PreimageChallenge(b64Challenge, math.MaxUint64)
 	if err != nil {
 		t.Fatal("Expected no error in processing challenge")
 	}
@@ -46,9 +45,8 @@ func TestArgon2PreimageChallenge(t *testing.T) {
 
 func TestArgon2PreimageChallengeTimeout(t *testing.T) {
 	b64Challenge := strings.Repeat("A", 170) + "MBAAAAIAAAAOEQAAABAAAA"
-	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond)
-	_, err := Argon2PreimageChallenge(b64Challenge, ctx)
-	if err != context.DeadlineExceeded {
+	_, err := Argon2PreimageChallenge(b64Challenge, uint64(time.Now().UnixMilli() + 5))
+	if err != DeadlineExceeded {
 		t.Fatal("Expected timeout in Argon2 preimage challenge")
 	}
 }
