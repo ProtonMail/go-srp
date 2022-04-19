@@ -25,8 +25,9 @@ func (deadlineExceededError) Temporary() bool { return true }
 
 const ecdlpPRFKeySize = 32
 
-// Deadlines are measured on the wall clock, not the monotonic clock, due
-// to unreliability on mobile devices
+// ECDLPChallenge computes the base64 solution for a given ECDLP base64 challenge 
+// within deadlineUnixMilli milliseconds, if any was found. Deadlines are measured on the
+// wall clock, not the monotonic clock, due to unreliability on mobile devices.
 func ECDLPChallenge(b64Challenge string, deadlineUnixMilli uint64) (b64Solution string, err error) {
 	challenge, err := base64.StdEncoding.DecodeString(b64Challenge)
 	if err != nil {
@@ -69,6 +70,9 @@ func ECDLPChallenge(b64Challenge string, deadlineUnixMilli uint64) (b64Solution 
 
 const argon2PRFKeySize = 32
 
+// Argon2PreimageChallenge computes the base64 solution for a given Argon2 base64 
+// challenge within deadlineUnixMilli milliseconds, if any was found. Deadlines are measured
+// on the wall clock, not the monotonic clock, due to unreliability on mobile devices.
 func Argon2PreimageChallenge(b64Challenge string, deadlineUnixMilli uint64) (b64Solution string, err error) {
 	challenge, err := base64.StdEncoding.DecodeString(b64Challenge)
 	if err != nil {
