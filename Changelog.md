@@ -2,9 +2,12 @@
 
 ## Unreleased
 
-## Changed
+### Added
+* New function `Argon2PreimageChallenge` to solve new hash preimage challenges.
+
+### Changed
 * Update `github.com/cronokirby/saferith` dependency to v0.33.0. Adds assembly routines support for more platforms
-* Update `ECDLPChallenge` to the new specification and add the new `Argon2PreimageChallenge`.
+* Update `ECDLPChallenge` to the new specification.
 
 ## v0.0.3 (2021-12-15)
 
