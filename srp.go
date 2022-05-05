@@ -247,30 +247,49 @@ func computeMultiplier(generator, modulus *big.Int, bitLength int) (*saferith.Na
 	return new(saferith.Nat).SetBig(multiplier, bitLength), nil
 }
 
-func checkParams(bitLength int, ephemeral, generator, modulus *big.Int, modulusMinusOne *big.Int) error {
+func checkParams(bitLength int, ephemeral, generator, modulus *big.Int) error {
+
+	if !generator.IsInt64() || generator.Int64() != 2 {
+		return errors.New("go-srp: SRP generator must always be 2")
+	}
 
 	if modulus.BitLen() != bitLength {
 		return errors.New("go-srp: SRP modulus has incorrect size")
 	}
 
-	if generator.Cmp(big.NewInt(1)) <= 0 || generator.Cmp(modulusMinusOne) >= 0 {
-		return errors.New("go-srp: SRP generator is out of bounds")
+	if modulus.Bit(0) != 1 || modulus.Bit(1) != 1 || modulus.Bit(2) != 0 {
+		// By quadratic reciprocity, 2 is a square mod N if and only if
+		// N is 1 or 7 mod 8. We want the generator, 2, to generate the
+		// whole group, not just the prime-order subgroup, so it should
+		// *not* be a square. In addition, since N should be prime, it
+		// must not be even, and since (N-1)/2 should be prime, N must
+		// not be 1 mod 4. This leaves 3 mod 8 as the only option.
+		return errors.New("go-srp: SRP modulus is not 3 mod 8")
 	}
 
+	modulusMinusOne := big.NewInt(0).Sub(modulus, big.NewInt(1))
 	if ephemeral.Cmp(big.NewInt(1)) <= 0 || ephemeral.Cmp(modulusMinusOne) >= 0 {
 		return errors.New("go-srp: SRP server ephemeral is out of bounds")
 	}
 
-	// Check primality
-	// Doing exponentiation here is faster than a full call to ProbablyPrime while
-	// still perfectly accurate by Pocklington's theorem
-	if big.NewInt(0).Exp(generator, modulusMinusOne, modulus).Cmp(big.NewInt(1)) != 0 {
-		return errors.New("pm-srp: SRP modulus is not prime")
-	}
+	// halfModulus is (N-1)/2. We've already checked that N is odd.
+	halfModulus := big.NewInt(0).Rsh(modulus, 1)
 
 	// Check safe primality
-	if !big.NewInt(0).Rsh(modulus, 1).ProbablyPrime(10) {
+	if !halfModulus.ProbablyPrime(10) {
 		return errors.New("pm-srp: SRP modulus is not a safe prime")
+	}
+
+	// Check primality using the Lucas primality test. This requires a
+	// single exponentiation for complete confidence (assuming halfModulus
+	// is prime), and so is much more efficient than relying on ProbablyPrime.
+	// To prove primality with the Lucas test with base 2, it suffices to
+	// show that 2^(N-1) = 1 (mod N) and 2^((N-1)/2) != 1 (mod N). The stricter
+	// condition, that 2^((N-1)/2) = -1 (mod N), is a single exponentiation
+	// and doubles as a test / guarantee that 2 is a generator of the whole group
+	// (and not a square).
+	if big.NewInt(0).Exp(generator, halfModulus, modulus).Cmp(modulusMinusOne) != 0 {
+		return errors.New("pm-srp: SRP modulus is not prime")
 	}
 
 	return nil
@@ -411,7 +430,7 @@ func (s *Auth) GenerateProofs(bitLength int) (*Proofs, error) {
 		bitLength,
 		serverEphemeralInt,
 		generatorInt,
-		modulusInt, modulusMinusOneInt,
+		modulusInt,
 	)
 	if err != nil {
 		return nil, err

@@ -8,6 +8,7 @@
 ### Changed
 * Update `github.com/cronokirby/saferith` dependency to v0.33.0. Adds assembly routines support for more platforms
 * Update `ECDLPChallenge` to the new specification.
+* Validate that 2 is a generator for SRP moduli
 
 ## v0.0.3 (2021-12-15)
 
