@@ -1,6 +1,6 @@
 # Changelog for SRP
 
-## Unreleased
+## v0.0.4 (2022-05-05)
 
 ### Added
 * New function `Argon2PreimageChallenge` to solve new hash preimage challenges.

@@ -22,7 +22,7 @@
 
 package srp
 
-const Version string = "0.0.3"
+const Version string = "0.0.4"
 
 //VersionNumber get current libaray version
 func VersionNumber() string {
