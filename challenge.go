@@ -25,6 +25,10 @@ func (deadlineExceededError) Temporary() bool { return true }
 
 const ecdlpPRFKeySize = 32
 
+func unixMilli(currentTime time.Time) int64 {
+	return currentTime.UnixNano() / 1e6 
+}
+
 // ECDLPChallenge computes the base64 solution for a given ECDLP base64 challenge 
 // within deadlineUnixMilli milliseconds, if any was found. Deadlines are measured on the
 // wall clock, not the monotonic clock, due to unreliability on mobile devices.
@@ -43,7 +47,7 @@ func ECDLPChallenge(b64Challenge string, deadlineUnixMilli uint64) (b64Solution 
 	buffer := make([]byte, 8)
 
 	for i = 0;; i++ {
-		if deadlineUnixMilli <= math.MaxInt64 && time.Now().UnixMilli() > int64(deadlineUnixMilli) {
+		if deadlineUnixMilli <= math.MaxInt64 && unixMilli(time.Now()) > int64(deadlineUnixMilli) {
 			return "", DeadlineExceeded
 		}
 
@@ -97,7 +101,7 @@ func Argon2PreimageChallenge(b64Challenge string, deadlineUnixMilli uint64) (b64
 	buffer := make([]byte, 8)
 
 	for i = 0;; i++ {
-		if deadlineUnixMilli <= math.MaxInt64 && time.Now().UnixMilli() > int64(deadlineUnixMilli) {
+		if deadlineUnixMilli <= math.MaxInt64 && unixMilli(time.Now()) > int64(deadlineUnixMilli) {
 			return "", DeadlineExceeded
 		}
 

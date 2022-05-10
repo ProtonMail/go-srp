@@ -1,5 +1,11 @@
 # Changelog for SRP
 
+## Unreleased
+
+### Fixed
+
+- Removed usage of time API that were incompatible with golang < 1.17
+
 ## v0.0.4 (2022-05-05)
 
 ### Added
