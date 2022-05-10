@@ -1,6 +1,6 @@
 # Changelog for SRP
 
-## Unreleased
+## v0.0.5 (2022-05-10)
 
 ### Fixed
 
