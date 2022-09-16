@@ -67,9 +67,9 @@ go mod vendor
 
 ## Usage
 
-## SRP Client
+### SRP Client
 
-## Sign up
+#### Sign up
 ```go 
 
 bitLength := 2048
@@ -91,7 +91,7 @@ verifier, err := verifierGenerator.GenerateVerifier(bitLength)
 // send salt and verifier to server for sign up
 ```
 
-## Log in
+#### Log in
 
 ```go 
 
@@ -118,11 +118,11 @@ if !bytes.Equal(serverProof, proofs.ExpectedServerProof) {
 }
 ```
 
-## SRP Server
+### SRP Server
 
 the server side implementation is provided for testing purposes
 
-## Sign up
+#### Sign up
 ```go 
 
 bitLength := 2048
@@ -139,7 +139,7 @@ version := 4
 
 ```
 
-## Log in
+#### Log in
 
 ```go 
 
