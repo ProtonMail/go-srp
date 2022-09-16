@@ -64,3 +64,108 @@ go mod vendor
 [github.com/ProtonMail/go-crypto](https://github.com/ProtonMail/go-crypto)
 
 [github.com/cronokirby/saferith](https://github.com/cronokirby/saferith)
+
+## Usage
+
+## SRP Client
+
+## Sign up
+```go 
+
+bitLength := 2048
+
+password := "<password typed by user>"
+
+salt := srp.RandomBytes(16)
+
+signedModulus := // provided and signed by the server, base64 encoded
+
+verifierGenerator, err  := NewAuthForVerifier(password, signedModulus, salt)
+
+// check errors, abort sign up if it failed 
+
+verifier, err := verifierGenerator.GenerateVerifier(bitLength)
+
+// check errors, abort sign up if it failed 
+
+// send salt and verifier to server for sign up
+```
+
+## Log in
+
+```go 
+
+bitLength := 2048
+
+username := "username"
+
+password := "<password typed by user>"
+
+version, salt, signedModulus, serverEphemeral := // get login info from server, values are base64 encoded
+
+proofsGenerator, err  := NewAuth(version, username, password, salt, signedModulus, serverEphemeral)
+
+// check errors, abort login if it failed 
+
+proofs, err := proofsGenerator.GenerateProofs(bitLength)
+
+// check errors, abort login if it failed 
+
+serverProof := // send proofs.ClientProof and proofs.ClientEphemeral to server, expect the serverProof in the response
+
+if !bytes.Equal(serverProof, proofs.ExpectedServerProof) {
+		// abort login
+}
+```
+
+## SRP Server
+
+the server side implementation is provided for testing purposes
+
+## Sign up
+```go 
+
+bitLength := 2048
+
+signedModulus := // Hardcoded on the server, needs to be signed by proton
+
+// send signed modulus to the client
+
+salt, verifier := // get sign up values from the client
+
+version := 4
+
+// store (salt, verifier, version, modulus) as the login information for the newly created account
+
+```
+
+## Log in
+
+```go 
+
+bitLength := 2048
+
+username := // get a login request for a given username
+
+salt, verifier, version, modulus := // retrieve the login information from the sign up
+
+loginServer, err := NewServerFromSigned(modulus, verifier, bitLength)
+
+// check errors, abort login if it failed
+
+serverEphemeral, err  := loginServer.GenerateChallenge()
+
+// check errors, abort login if it failed
+
+// reply to the request with salt, version, modulus, serverEphemeral
+
+clientEphemeral, clientProof := // get a login proof from the client
+
+serverProof, err := loginServer.VerifyProofs(clientEphemeral, clientProof)
+
+// check errors, abort login if it failed
+
+// send back serverProof to the client
+
+// user is logged in
+```
