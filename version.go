@@ -22,7 +22,7 @@
 
 package srp
 
-const Version string = "0.0.5"
+const Version string = "0.0.6"
 
 // VersionNumber get current library version
 func VersionNumber() string {

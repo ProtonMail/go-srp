@@ -1,5 +1,11 @@
 # Changelog for SRP
 
+## v0.0.6 (2023-03-17)
+
+### Changed
+
+- Changed API for challenge solvers to use int64 instead of uint64 for go-mobile
+
 ## v0.0.5 (2022-05-10)
 
 ### Fixed
