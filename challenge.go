@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"math"
 	"time"
 
 	"golang.org/x/crypto/argon2"
@@ -18,29 +19,26 @@ var DeadlineExceeded error = deadlineExceededError{}
 
 type deadlineExceededError struct{}
 
-func (deadlineExceededError) Error() string {
-	return "srp: deadline exceeded calculating proof-of-work challenge"
-}
+func (deadlineExceededError) Error() string   { return "srp: deadline exceeded calculating proof-of-work challenge" }
 func (deadlineExceededError) Timeout() bool   { return true }
 func (deadlineExceededError) Temporary() bool { return true }
 
 const ecdlpPRFKeySize = 32
 
 func unixMilli(currentTime time.Time) int64 {
-	return currentTime.UnixNano() / 1e6
+	return currentTime.UnixNano() / 1e6 
 }
 
-// ECDLPChallenge computes the base64 solution for a given ECDLP base64 challenge
+// ECDLPChallenge computes the base64 solution for a given ECDLP base64 challenge 
 // within deadlineUnixMilli milliseconds, if any was found. Deadlines are measured on the
 // wall clock, not the monotonic clock, due to unreliability on mobile devices.
-// deadlineUnixMilli = -1 means unlimited time.
-func ECDLPChallenge(b64Challenge string, deadlineUnixMilli int64) (b64Solution string, err error) {
+func ECDLPChallenge(b64Challenge string, deadlineUnixMilli uint64) (b64Solution string, err error) {
 	challenge, err := base64.StdEncoding.DecodeString(b64Challenge)
 	if err != nil {
 		return "", err
 	}
 
-	if len(challenge) != 2*ecdlpPRFKeySize+sha256.Size {
+	if len(challenge) != 2 * ecdlpPRFKeySize + sha256.Size {
 		return "", errors.New("srp: invalid ECDLP challenge length")
 	}
 
@@ -48,8 +46,8 @@ func ECDLPChallenge(b64Challenge string, deadlineUnixMilli int64) (b64Solution s
 	var point []byte
 	buffer := make([]byte, 8)
 
-	for i = 0; ; i++ {
-		if deadlineUnixMilli >= 0 && unixMilli(time.Now()) > int64(deadlineUnixMilli) {
+	for i = 0;; i++ {
+		if deadlineUnixMilli <= math.MaxInt64 && unixMilli(time.Now()) > int64(deadlineUnixMilli) {
 			return "", DeadlineExceeded
 		}
 
@@ -76,35 +74,34 @@ func ECDLPChallenge(b64Challenge string, deadlineUnixMilli int64) (b64Solution s
 
 const argon2PRFKeySize = 32
 
-// Argon2PreimageChallenge computes the base64 solution for a given Argon2 base64
+// Argon2PreimageChallenge computes the base64 solution for a given Argon2 base64 
 // challenge within deadlineUnixMilli milliseconds, if any was found. Deadlines are measured
 // on the wall clock, not the monotonic clock, due to unreliability on mobile devices.
-// deadlineUnixMilli = -1 means unlimited time.
-func Argon2PreimageChallenge(b64Challenge string, deadlineUnixMilli int64) (b64Solution string, err error) {
+func Argon2PreimageChallenge(b64Challenge string, deadlineUnixMilli uint64) (b64Solution string, err error) {
 	challenge, err := base64.StdEncoding.DecodeString(b64Challenge)
 	if err != nil {
 		return "", err
 	}
 
 	// Argon2 challenges consist of 3 PRF keys, the hash output, and 4 32-bit argon2 parameters
-	if len(challenge) != 3*argon2PRFKeySize+sha256.Size+4*4 {
+	if len(challenge) !=  3 * argon2PRFKeySize + sha256.Size + 4 * 4 {
 		return "", errors.New("srp: invalid Argon2 preimage challenge length")
 	}
 	prfKeys := challenge[:3*argon2PRFKeySize]
 	goal := challenge[3*argon2PRFKeySize:][:sha256.Size]
-	argon2Params := challenge[3*argon2PRFKeySize+sha256.Size:]
+	argon2Params := challenge[3*argon2PRFKeySize + sha256.Size:]
 
-	threads := binary.LittleEndian.Uint32(argon2Params[0:])
+	threads          := binary.LittleEndian.Uint32(argon2Params[0:])
 	argon2OutputSize := binary.LittleEndian.Uint32(argon2Params[4:])
-	memoryCost := binary.LittleEndian.Uint32(argon2Params[8:])
-	timeCost := binary.LittleEndian.Uint32(argon2Params[12:])
+	memoryCost       := binary.LittleEndian.Uint32(argon2Params[8:])
+	timeCost         := binary.LittleEndian.Uint32(argon2Params[12:])
 
 	var i uint64
 	var stage2 []byte
 	buffer := make([]byte, 8)
 
-	for i = 0; ; i++ {
-		if deadlineUnixMilli >= 0 && unixMilli(time.Now()) > int64(deadlineUnixMilli) {
+	for i = 0;; i++ {
+		if deadlineUnixMilli <= math.MaxInt64 && unixMilli(time.Now()) > int64(deadlineUnixMilli) {
 			return "", DeadlineExceeded
 		}
 
