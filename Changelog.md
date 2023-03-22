@@ -1,5 +1,11 @@
 # Changelog for SRP
 
+## v0.0.7 (2023-03-22)
+
+### Changed
+
+- Update `github.com/ProtonMail/go-crypto` to latest version.
+
 ## v0.0.6 (2023-03-17)
 
 ### Changed
